@@ -1,4 +1,4 @@
-# poc12
+# poc12-AVC_DuplicateConfig-SEGV
 ## Test Environment
 Ubuntu 18.04, 64bit  
 gpac (master 94ad872)
@@ -7,6 +7,7 @@ gpac (master 94ad872)
 `$ MP4Box -diso $POC`
 
 ## Reference
+https://github.com/gpac/gpac/issues/1179
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -165,7 +166,7 @@ AVC_DuplicateConfig (cfg=0x0)
 #41 0x0000555555561e6a in _start ()
 ```
 
-# poc13
+# poc13-leak
 ## Test Environment
 Ubuntu 18.04, 64bit  
 gpac (master 94ad872)
@@ -175,6 +176,7 @@ gpac (master 94ad872)
 `$ MP4Box -diso $POC`
 
 ## Reference
+https://github.com/gpac/gpac/issues/1183
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -194,7 +196,7 @@ Direct leak of 40 byte(s) in 1 object(s) allocated from:
 SUMMARY: AddressSanitizer: 40 byte(s) leaked in 1 allocation(s).
 ```
 
-# poc14
+# poc14-audio_sample_entry_AddBox-heapoverflow
 ## Test Environment
 Ubuntu 18.04, 64bit  
 gpac (master 94ad872)
@@ -204,6 +206,7 @@ gpac (master 94ad872)
 `$ MP4Box -diso $POC`
 
 ## Reference
+https://github.com/gpac/gpac/issues/1180
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -288,4 +291,38 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   Left alloca redzone:     ca
   Right alloca redzone:    cb
 ==71438==ABORTING
+```
+
+### GDB report
+
+```
+malloc_consolidate(): invalid chunk size
+
+Program received signal SIGABRT, Aborted.
+__GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:51
+51	../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) bt
+#0  __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:51
+#1  0x00007ffff7350801 in __GI_abort () at abort.c:79
+#2  0x00007ffff7399897 in __libc_message (action=action@entry=do_abort, fmt=fmt@entry=0x7ffff74c6b9a "%s\n") at ../sysdeps/posix/libc_fatal.c:181
+#3  0x00007ffff73a090a in malloc_printerr (str=str@entry=0x7ffff74c83f0 "malloc_consolidate(): invalid chunk size") at malloc.c:5350
+#4  0x00007ffff73a0bae in malloc_consolidate (av=av@entry=0x7ffff76fbc40 <main_arena>) at malloc.c:4441
+#5  0x00007ffff73a47d8 in _int_malloc (av=av@entry=0x7ffff76fbc40 <main_arena>, bytes=bytes@entry=4096) at malloc.c:3703
+#6  0x00007ffff73a70fc in __GI___libc_malloc (bytes=4096) at malloc.c:3057
+#7  0x00007ffff738e18c in __GI__IO_file_doallocate (fp=0x5555557a6260) at filedoalloc.c:101
+#8  0x00007ffff739e379 in __GI__IO_doallocbuf (fp=fp@entry=0x5555557a6260) at genops.c:365
+#9  0x00007ffff739ad23 in _IO_new_file_seekoff (fp=0x5555557a6260, offset=0, dir=2, mode=<optimized out>) at fileops.c:960
+#10 0x00007ffff7398dd9 in fseeko (fp=fp@entry=0x5555557a6260, offset=offset@entry=0, whence=whence@entry=2) at fseeko.c:36
+#11 0x00007ffff77527c9 in gf_fseek (fp=fp@entry=0x5555557a6260, offset=offset@entry=0, whence=whence@entry=2)
+    at /home/ubuntu/Desktop/crashana/gpac/gpac-94ad872/src/utils/os_file.c:756
+#12 0x00007ffff7753323 in gf_bs_from_file (f=0x5555557a6260, mode=mode@entry=0) at /home/ubuntu/Desktop/crashana/gpac/gpac-94ad872/src/utils/bitstream.c:179
+#13 0x00007ffff7894173 in gf_isom_fdm_new (sPath=<optimized out>, mode=<optimized out>) at /home/ubuntu/Desktop/crashana/gpac/gpac-94ad872/src/isomedia/data_map.c:453
+#14 0x00007ffff7894400 in gf_isom_datamap_new (location=<optimized out>, location@entry=0x7fffffffe197 "../../poc14-heapoverflow", parentPath=parentPath@entry=0x0, 
+    mode=mode@entry=1 '\001', outDataMap=outDataMap@entry=0x5555557a68b0) at /home/ubuntu/Desktop/crashana/gpac/gpac-94ad872/src/isomedia/data_map.c:185
+#15 0x00007ffff789cf66 in gf_isom_open_progressive (fileName=<optimized out>, start_range=0, end_range=0, the_file=0x5555557a5738 <file>, BytesMissing=0x7fffffff9390)
+    at /home/ubuntu/Desktop/crashana/gpac/gpac-94ad872/src/isomedia/isom_read.c:367
+#16 0x000055555556f48b in mp4boxMain (argc=<optimized out>, argv=<optimized out>) at /home/ubuntu/Desktop/crashana/gpac/gpac-94ad872/applications/mp4box/main.c:4542
+#17 0x00007ffff7331b97 in __libc_start_main (main=0x555555561e30 <main>, argc=3, argv=0x7fffffffdd98, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, 
+    stack_end=0x7fffffffdd88) at ../csu/libc-start.c:310
+#18 0x0000555555561e6a in _start ()
 ```
