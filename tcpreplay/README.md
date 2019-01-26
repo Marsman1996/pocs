@@ -19,7 +19,8 @@ Verbose printing via tcpdump: enabled
 ./tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null
 
 ## Reference
-
+https://github.com/appneta/tcpreplay/issues/530  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-20552
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -91,7 +92,8 @@ tcpreplay (master 2d87447)
 ./tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null
 
 ## Reference
-
+https://github.com/appneta/tcpreplay/issues/530  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-20553
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
