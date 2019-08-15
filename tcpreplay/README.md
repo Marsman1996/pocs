@@ -1,4 +1,4 @@
-# poc15-packet2tree-heapoverflow
+# poc15-packet2tree-heapoverflow (CVE-2018-20552)
 ## Test Environment
 Ubuntu 18.04, 64bit  
 tcpreplay (master 2d87447)
@@ -83,7 +83,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ```
 
 
-# poc16-get_l2len-heapoverflow
+# poc16-get_l2len-heapoverflow (CVE-2018-20553)
 ## Test Environment
 Ubuntu 18.04, 64bit  
 tcpreplay (master 2d87447)
