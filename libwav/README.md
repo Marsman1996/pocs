@@ -8,7 +8,7 @@ libwav (master 5cc8746)
 `$ ./wav_gain $POC /dev/null`
 
 ## Reference
-
+https://github.com/marc-q/libwav/issues/24
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
