@@ -1,4 +1,4 @@
-# POC18-gain_file-SEGV
+# POC19-ReadUI32-SEGV
 a NULL Pointer Dereference bug
 ## Test Environment
 Ubuntu 14.04, 64bit, Bento4(master cbebcc9)
@@ -7,7 +7,7 @@ Ubuntu 14.04, 64bit, Bento4(master cbebcc9)
 `$ ./mp4tag --list-symbols --list-keys --show-tags $POC`
 
 ## Reference
-
+https://github.com/axiomatic-systems/Bento4/issues/422
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
