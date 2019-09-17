@@ -1,4 +1,4 @@
-# POC18-gain_file-SEGV
+# POC18-gain_file-SEGV (CVE-2019-16348)
 a NULL Pointer Dereference bug
 ## Test Environment
 Ubuntu 14.04, 64bit
@@ -8,11 +8,13 @@ libwav (master 5cc8746)
 `$ ./wav_gain $POC /dev/null`
 
 ## Reference
-https://github.com/marc-q/libwav/issues/24
+https://github.com/marc-q/libwav/issues/24  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16348
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
-Marsman1996(lqliuyuwei@outlook.com)
+Marsman1996(lqliuyuwei@outlook.com)  
+Yuanpingyu(cfenicey@gmail.com)
 
 ## Details
 ### Asan report

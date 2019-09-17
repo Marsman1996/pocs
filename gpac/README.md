@@ -1,4 +1,4 @@
-# poc12-AVC_DuplicateConfig-SEGV
+# poc12-AVC_DuplicateConfig-SEGV (CVE-2018-21015)
 ## Test Environment
 Ubuntu 18.04, 64bit  
 gpac (master 94ad872)
@@ -8,6 +8,7 @@ gpac (master 94ad872)
 
 ## Reference
 https://github.com/gpac/gpac/issues/1179
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-21015
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -166,7 +167,7 @@ AVC_DuplicateConfig (cfg=0x0)
 #41 0x0000555555561e6a in _start ()
 ```
 
-# poc13-leak
+# poc13-leak (CVE-2018-21016)
 ## Test Environment
 Ubuntu 18.04, 64bit  
 gpac (master 94ad872)
@@ -177,6 +178,7 @@ gpac (master 94ad872)
 
 ## Reference
 https://github.com/gpac/gpac/issues/1183
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-21016
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -196,7 +198,7 @@ Direct leak of 40 byte(s) in 1 object(s) allocated from:
 SUMMARY: AddressSanitizer: 40 byte(s) leaked in 1 allocation(s).
 ```
 
-# poc14-audio_sample_entry_AddBox-heapoverflow
+# poc14-audio_sample_entry_AddBox-heapoverflow (CVE-2018-21017)
 ## Test Environment
 Ubuntu 18.04, 64bit  
 gpac (master 94ad872)
@@ -207,6 +209,7 @@ gpac (master 94ad872)
 
 ## Reference
 https://github.com/gpac/gpac/issues/1180
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-21017
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  

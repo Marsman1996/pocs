@@ -1,4 +1,4 @@
-# POC19-ReadUI32-SEGV
+# POC19-ReadUI32-SEGV (CVE-2019-16349)
 a NULL Pointer Dereference bug
 ## Test Environment
 Ubuntu 14.04, 64bit, Bento4(master cbebcc9)
@@ -7,11 +7,13 @@ Ubuntu 14.04, 64bit, Bento4(master cbebcc9)
 `$ ./mp4tag --list-symbols --list-keys --show-tags $POC`
 
 ## Reference
-https://github.com/axiomatic-systems/Bento4/issues/422
+https://github.com/axiomatic-systems/Bento4/issues/422  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16349
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
-Marsman1996(lqliuyuwei@outlook.com)
+Marsman1996(lqliuyuwei@outlook.com)  
+Yuanpingyu(cfenicey@gmail.com)
 
 ## Details
 ### Asan report

@@ -128,7 +128,7 @@ ngiflib(master c8488d5)
 `$ gif2tga $POC`
 
 ## Reference
-
+https://github.com/miniupnp/ngiflib/issues/10
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -191,7 +191,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ==122055==ABORTING
 ```
 
-# poc13-WritePixel-heapoverflow
+# poc13-WritePixel-heapoverflow (CVE-2019-16346)
 ## Test Environment
 Ubuntu 16.04, 64bit  
 ngiflib(master 3bb9980)
@@ -200,7 +200,8 @@ ngiflib(master 3bb9980)
 `$ gif2tga $POC`
 
 ## Reference
-
+https://github.com/miniupnp/ngiflib/issues/11  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16346
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
@@ -259,7 +260,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ==122089==ABORTING
 ```
 
-# poc14-WritePixels-heapoverflow
+# poc14-WritePixels-heapoverflow (CVE-2019-16347)
 ## Test Environment
 Ubuntu 16.04, 64bit  
 ngiflib(master 3bb9980)
@@ -268,7 +269,8 @@ ngiflib(master 3bb9980)
 `$ gif2tga $POC`
 
 ## Reference
-
+https://github.com/miniupnp/ngiflib/issues/12  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16347
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  

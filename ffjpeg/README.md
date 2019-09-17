@@ -1,18 +1,20 @@
-# poc20-idct2d8x8-SEGV
+# poc20-idct2d8x8-SEGV (CVE-2019-16350)
 a NULL Pointer Dereference bug
 ## Test Environment
-Ubuntu 14.04, 64bit, ffjpeg(master cbebcc9)
+Ubuntu 14.04, 64bit, ffjpeg(master 627c8a9)
 
 ## How to trigger
 1. compile ffjpeg with cmake file from https://github.com/rockcarry/ffjpeg/issues/6
 2. `$ ./ffjpeg -d $POC`
 
 ## Reference
-
+https://github.com/rockcarry/ffjpeg/issues/10  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16350
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
-Marsman1996(lqliuyuwei@outlook.com)
+Marsman1996(lqliuyuwei@outlook.com)  
+Yuanpingyu(cfenicey@gmail.com)
 
 ## Details
 ### Asan report
@@ -45,21 +47,23 @@ Program received signal SIGSEGV, Segmentation fault.
     at /home/aota10/MARS_fuzzcompare/test/ffjpeg/code/ffjpeg.c:25
 ```
 
-# poc21-huffman_decode_step-SEGV
+# poc21-huffman_decode_step-SEGV (CVE-2019-16351)
 
 ## Test Environment
-Ubuntu 14.04, 64bit, ffjpeg(master cbebcc9)
+Ubuntu 14.04, 64bit, ffjpeg(master 627c8a9)
 
 ## How to trigger
 1. compile ffjpeg with cmake file from https://github.com/rockcarry/ffjpeg/issues/6
 2. `$ ./ffjpeg -d $POC`
 
 ## Reference
-
+https://github.com/rockcarry/ffjpeg/issues/11  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16351
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
 Marsman1996(lqliuyuwei@outlook.com)
+Yuanpingyu(cfenicey@gmail.com)
 
 ## Details
 ### Asan report
@@ -92,21 +96,23 @@ Program received signal SIGSEGV, Segmentation fault.
     at /home/aota10/MARS_fuzzcompare/test/ffjpeg/code/ffjpeg.c:25
 ```
 
-# poc22-jfif_load-heapoverflow
+# poc22-jfif_load-heapoverflow (CVE-2019-16352)
 a heap-buffer-overflow bug
 ## Test Environment
-Ubuntu 14.04, 64bit, ffjpeg(master cbebcc9)
+Ubuntu 14.04, 64bit, ffjpeg(master 627c8a9)
 
 ## How to trigger
 1. compile ffjpeg with cmake file from https://github.com/rockcarry/ffjpeg/issues/6
 2. `$ ./ffjpeg -d $POC`
 
 ## Reference
-
+https://github.com/rockcarry/ffjpeg/issues/12  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16352
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
 Marsman1996(lqliuyuwei@outlook.com)
+Yuanpingyu(cfenicey@gmail.com)
 
 ## Details
 ### Asan report
