@@ -43,7 +43,7 @@ __GI___libc_free (mem=0x24564157) at malloc.c:2931
 #1  0x00000000004007e2 in main ()
 ```
 
-# poc23-libwav-5cc8746-wav_chunk_read-leak
+# poc23-libwav-5cc8746-wav_chunk_read-leak (CVE-2020-28176)
 There is a memory leak error when the wav_gain program tries to read the poc file but failed. 
 It allocated memory in wav_chunk_read() libwav.c:165, but due to the read failure it directly returns in gain_file() wav_gain.c:23 and misses the memory free process in wav_gain():33.
 
@@ -56,6 +56,8 @@ libwav (master 5cc8746)
 2. run the compiled program `$ ./wav_gain $POC /dev/null`
 
 ## Reference
+https://github.com/marc-q/libwav/issues/28  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28176
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
