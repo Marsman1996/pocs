@@ -184,3 +184,52 @@ Program received signal SIGABRT, Aborted.
     at /home/aota10/MARS_fuzzcompare/test/ffjpeg/code/ffjpeg.c:24
 (gdb) 
 ```
+
+# poc-ffjpeg-d5cfd49-jfif_encode-SEGV
+This segment fault error is because in `bmp_load()`, when bmp's size is out of range, it returns without assign memory buffer to `pb->pdata` and did not exit the program. 
+So the program crashes when it tries to access the `pb->data`, which is a invalid memory address.
+
+## Test Environment
+Ubuntu 16.04, 64bit  
+ffjpeg (master d5cfd49)
+
+## How to trigger
+`$ ./ffjpeg -e $POC`
+
+## Reference
+https://github.com/miniupnp/ngiflib/issues/19  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=2021-36530
+## Credits
+Yanhao(unfuzzable123@gmail.com)  
+Marsman1996(lqliuyuwei@outlook.com)
+
+## Details
+
+### ASAN report
+```
+./bin_asan/bin/ffjpeg -e poc-ffjpeg-d5cfd49-jfif_encode-SEGV
+bmp's width * height is out of range !
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==2671==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000002 (pc 0x000000520b78 bp 0x7fffe13204d0 sp 0x7fffe131fc80 T0)
+==2671==The signal is caused by a READ memory access.
+==2671==Hint: address points to the zero page.
+    #0 0x520b77 in jfif_encode /opt/disk/marsman/test/ffjpeg/build_asan/src/jfif.c:763:24
+    #1 0x515e57 in main /opt/disk/marsman/test/ffjpeg/build_asan/src/ffjpeg.c:30:16
+    #2 0x7fbeea24c83f in __libc_start_main /build/glibc-S7Ft5T/glibc-2.23/csu/../csu/libc-start.c:291
+    #3 0x419f68 in _start (/opt/disk/marsman/test/ffjpeg/bin_asan/bin/ffjpeg+0x419f68)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV /opt/disk/marsman/test/ffjpeg/build_asan/src/jfif.c:763:24 in jfif_encode
+==2671==ABORTING
+```
+
+### gdb report
+```
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000520b78 in jfif_encode (pb=0x7fffffffdae0) at jfif.c:763
+763                 rgb_to_yuv(bsrc[2], bsrc[1], bsrc[0], ydst, udst, vdst);
+(gdb) bt
+#0  0x0000000000520b78 in jfif_encode (pb=0x7fffffffdae0) at jfif.c:763
+#1  0x0000000000515e58 in main (argc=3, argv=0x7fffffffdcf8) at ffjpeg.c:30
+```

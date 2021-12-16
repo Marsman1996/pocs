@@ -326,7 +326,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ```
 
 # poc-ngiflib-0245fd4-GetByte-overflow
-
+This Overflow problem is because in NGIFLIB_NO_FILE mode, `GetByte()` reads memory buffer without checking the boundary.
 ## Test Environment
 Ubuntu 16.04, 64bit  
 ngiflib(master 0245fd4)
@@ -336,13 +336,13 @@ ngiflib(master 0245fd4)
 2. run the compiled program `$ ./gif2tga --outbase /dev/null $POC`
 
 ## Reference
-
+https://github.com/miniupnp/ngiflib/issues/18  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=2021-36531
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
 Marsman1996(lqliuyuwei@outlook.com)
 
 ## Details
-This Overflow problem is because in NGIFLIB_NO_FILE mode, `GetByte()` reads memory buffer without checking the boundary.
 
 ### ASAN report
 ```
@@ -396,6 +396,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ```
 
 # poc-ngiflib-0245fd4-GetByteStr-overflow
+Similar to #xx, this Overflow problem is because in NGIFLIB_NO_FILE mode, `GetByteStr()` copy memory buffer without checking the boundary.
 
 ## Test Environment
 Ubuntu 16.04, 64bit  
@@ -406,13 +407,13 @@ ngiflib(master 0245fd4)
 2. run the compiled program `$ ./gif2tga --outbase /dev/null $POC`
 
 ## Reference
-
+https://github.com/miniupnp/ngiflib/issues/19  
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=2021-36530
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
 Marsman1996(lqliuyuwei@outlook.com)
 
 ## Details
-Similar to #xx, this Overflow problem is because in NGIFLIB_NO_FILE mode, `GetByteStr()` copy memory buffer without checking the boundary.
 
 ### ASAN report
 ```
