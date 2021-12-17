@@ -197,8 +197,9 @@ ffjpeg (master d5cfd49)
 `$ ./ffjpeg -e $POC`
 
 ## Reference
-https://github.com/miniupnp/ngiflib/issues/19  
-https://cve.mitre.org/cgi-bin/cvename.cgi?name=2021-36530
+https://github.com/rockcarry/ffjpeg/issues/47  
+
+
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  
 Marsman1996(lqliuyuwei@outlook.com)
@@ -226,6 +227,23 @@ SUMMARY: AddressSanitizer: SEGV /opt/disk/marsman/test/ffjpeg/build_asan/src/jfi
 
 ### gdb report
 ```
+Breakpoint 1, bmp_load (pb=0x7fffffffdae0, file=0x7fffffffe070 "./poc-ffjpeg-d5cfd49-jfif_encode-SEGV") at bmp.c:45
+45              printf("bmp's width * height is out of range !\n");
+(gdb) n
+bmp's width * height is out of range !
+46              goto done;
+(gdb) c
+Continuing.
+
+Breakpoint 2, jfif_encode (pb=0x7fffffffdae0) at jfif.c:757
+757         bsrc = pb->pdata;
+(gdb) n
+758         ydst = yuv_datbuf[0];
+(gdb) p bsrc
+$2 = (BYTE *) 0x0
+(gdb) c
+Continuing.
+
 Program received signal SIGSEGV, Segmentation fault.
 0x0000000000520b78 in jfif_encode (pb=0x7fffffffdae0) at jfif.c:763
 763                 rgb_to_yuv(bsrc[2], bsrc[1], bsrc[0], ydst, udst, vdst);

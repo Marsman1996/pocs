@@ -154,3 +154,69 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   Right alloca redzone:    cb
 ==54318==ABORTING
 ```
+
+# poc-tcpreplay-0ca82e3-add_tree_ipv4-assertion
+
+## Test Environment
+Ubuntu 16.04, 64bit  
+tcpreplay (master 0ca82e3)
+
+## How to trigger
+`$ tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null`
+
+## Details
+
+### GDB report
+```
+Breakpoint 1, add_tree_ipv4 (ip=327679, data=<optimized out>, len=<optimized out>) at ../../code/src/tree.c:538
+538             assert(ip == newnode->u.ip);
+(gdb) p ip
+$6 = 327679
+(gdb) p newnode->u.ip
+$7 = 0
+(gdb) n
+tcpprep: ../../code/src/tree.c:538: add_tree_ipv4: Assertion `ip == newnode->u.ip' failed.
+
+Program received signal SIGABRT, Aborted.
+0x00007ffff7801438 in __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:54
+54      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) bt
+#0  0x00007ffff7801438 in __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:54
+#1  0x00007ffff780303a in __GI_abort () at abort.c:89
+#2  0x00007ffff77f9be7 in __assert_fail_base (fmt=<optimized out>, assertion=assertion@entry=0x41a3ba "ip == newnode->u.ip", file=file@entry=0x41a3a4 "../../code/src/tree.c", 
+    line=line@entry=538, function=function@entry=0x41a720 <__PRETTY_FUNCTION__.7785> "add_tree_ipv4") at assert.c:92
+#3  0x00007ffff77f9c92 in __GI___assert_fail (assertion=assertion@entry=0x41a3ba "ip == newnode->u.ip", file=file@entry=0x41a3a4 "../../code/src/tree.c", line=line@entry=538, 
+    function=function@entry=0x41a720 <__PRETTY_FUNCTION__.7785> "add_tree_ipv4") at assert.c:101
+#4  0x00000000004052db in add_tree_ipv4 (ip=327679, data=<optimized out>, len=<optimized out>) at ../../code/src/tree.c:538
+#5  0x0000000000402f64 in process_raw_packets (pcap=0x648c10) at ../../code/src/tcpprep.c:463
+#6  main (argc=<optimized out>, argv=<optimized out>) at ../../code/src/tcpprep.c:144
+```
+
+# poc-tcpreplay-0ca82e3-add_tree_ipv6-assertion
+
+## Test Environment
+Ubuntu 16.04, 64bit  
+tcpreplay (master 0ca82e3)
+
+## How to trigger
+`$ tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null`
+
+## Details
+### GDB report
+```
+tcpprep: ../../code/src/tree.c:561: add_tree_ipv6: Assertion `ipv6_cmp(addr, &newnode->u.ip6) == 0' failed.
+
+Program received signal SIGABRT, Aborted.
+0x00007ffff7801438 in __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:54
+54      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) bt
+#0  0x00007ffff7801438 in __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:54
+#1  0x00007ffff780303a in __GI_abort () at abort.c:89
+#2  0x00007ffff77f9be7 in __assert_fail_base (fmt=<optimized out>, assertion=assertion@entry=0x41a630 "ipv6_cmp(addr, &newnode->u.ip6) == 0", file=file@entry=0x41a3a4 "../../code/src/tree.c", 
+    line=line@entry=561, function=function@entry=0x41a6f0 <__PRETTY_FUNCTION__.7792> "add_tree_ipv6") at assert.c:92
+#3  0x00007ffff77f9c92 in __GI___assert_fail (assertion=assertion@entry=0x41a630 "ipv6_cmp(addr, &newnode->u.ip6) == 0", file=file@entry=0x41a3a4 "../../code/src/tree.c", line=line@entry=561, 
+    function=function@entry=0x41a6f0 <__PRETTY_FUNCTION__.7792> "add_tree_ipv6") at assert.c:101
+#4  0x0000000000405359 in add_tree_ipv6 (addr=0x7ffff7f81018, data=<optimized out>, len=<optimized out>) at ../../code/src/tree.c:561
+#5  0x00000000004031fb in process_raw_packets (pcap=0x648c10) at ../../code/src/tcpprep.c:465
+#6  main (argc=<optimized out>, argv=<optimized out>) at ../../code/src/tcpprep.c:144
+```
