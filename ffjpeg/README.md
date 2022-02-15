@@ -185,7 +185,7 @@ Program received signal SIGABRT, Aborted.
 (gdb) 
 ```
 
-# poc-ffjpeg-d5cfd49-jfif_encode-SEGV
+# poc-ffjpeg-d5cfd49-jfif_encode-SEGV (CVE-2021-45385)
 This segment fault error is because in `bmp_load()`, when bmp's size is out of range, it returns without assign memory buffer to `pb->pdata` and did not exit the program. 
 So the program crashes when it tries to access the `pb->data`, which is a invalid memory address.
 
@@ -198,7 +198,7 @@ ffjpeg (master d5cfd49)
 
 ## Reference
 https://github.com/rockcarry/ffjpeg/issues/47  
-
+https://www.cve.org/CVERecord?id=CVE-2021-45385  
 
 ## Credits
 Yanhao(unfuzzable123@gmail.com)  

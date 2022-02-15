@@ -155,7 +155,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ==54318==ABORTING
 ```
 
-# poc-tcpreplay-0ca82e3-add_tree_ipv4-assertion
+# poc-tcpreplay-0ca82e3-add_tree_ipv4-assertion (CVE-2021-45387)
 
 ## Test Environment
 Ubuntu 16.04, 64bit  
@@ -163,6 +163,10 @@ tcpreplay (master 0ca82e3)
 
 ## How to trigger
 `$ tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null`
+
+## Reference
+https://github.com/appneta/tcpreplay/issues/687  
+https://www.cve.org/CVERecord?id=CVE-2021-45387  
 
 ## Details
 
@@ -192,7 +196,7 @@ Program received signal SIGABRT, Aborted.
 #6  main (argc=<optimized out>, argv=<optimized out>) at ../../code/src/tcpprep.c:144
 ```
 
-# poc-tcpreplay-0ca82e3-add_tree_ipv6-assertion
+# poc-tcpreplay-0ca82e3-add_tree_ipv6-assertion (CVE-2021-45386)
 
 ## Test Environment
 Ubuntu 16.04, 64bit  
@@ -200,6 +204,10 @@ tcpreplay (master 0ca82e3)
 
 ## How to trigger
 `$ tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null`
+
+## Reference
+https://github.com/appneta/tcpreplay/issues/687  
+https://www.cve.org/CVERecord?id=CVE-2021-45386  
 
 ## Details
 ### GDB report
@@ -219,4 +227,53 @@ Program received signal SIGABRT, Aborted.
 #4  0x0000000000405359 in add_tree_ipv6 (addr=0x7ffff7f81018, data=<optimized out>, len=<optimized out>) at ../../code/src/tree.c:561
 #5  0x00000000004031fb in process_raw_packets (pcap=0x648c10) at ../../code/src/tcpprep.c:465
 #6  main (argc=<optimized out>, argv=<optimized out>) at ../../code/src/tcpprep.c:144
+```
+
+# poc-tcpreplay-09f0774-packet2tree-assertion
+The assertion `assert(l2len > 0);` in packet2tree() at tree.c is reachable when the user uses tcpprep to open a crafted pcap file.
+The variable `l2len` is assigned in get_l2len_protocol() at get.c. 
+
+https://github.com/appneta/tcpreplay/blob/09f07748dcabe3d58961f123f31dd0f75198a389/src/tree.c#L733-L746
+
+However, when the `datalink` is `DLT_RAW` or `DLT_JUNIPER_ETHER`, `l2len` is not assigned, and the assertion is triggered.
+
+https://github.com/appneta/tcpreplay/blob/09f07748dcabe3d58961f123f31dd0f75198a389/src/common/get.c#L268-L282
+
+## Test Environment
+Ubuntu 16.04, 64bit  
+tcpreplay (master 09f0774)
+
+## How to trigger
+1. Get the Tcpreplay source code (master 09f0774) and compile it.
+2. Run command: `$ tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null`  
+   The POC file could be downloaded here:  
+   [POC_file]()
+
+## Reference
+
+
+## Details
+### GDB report
+```
+Breakpoint 6, packet2tree (data=0x7ffff7ef8010 "@", len=33, datalink=12) at ../../code/src/tree.c:733
+733         res = get_l2len_protocol(data,
+(gdb) p datalink 
+$8 = 12
+(gdb) n
+741         if (res == -1)
+(gdb) 
+744         node = new_tree();
+(gdb) 
+
+Breakpoint 1, packet2tree (data=0x7ffff7ef8010 "@", len=33, datalink=<optimized out>) at ../../code/src/tree.c:746
+746         assert(l2len > 0);
+(gdb) p l2len 
+$9 = 0
+(gdb) c
+Continuing.
+tcpprep: ../../code/src/tree.c:746: tcpr_tree_t *packet2tree(const u_char *, const int, int): Assertion `l2len > 0' failed.
+
+Program received signal SIGABRT, Aborted.
+0x00007ffff7194438 in __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:54
+54      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
 ```
