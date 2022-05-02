@@ -229,7 +229,7 @@ Program received signal SIGABRT, Aborted.
 #6  main (argc=<optimized out>, argv=<optimized out>) at ../../code/src/tcpprep.c:144
 ```
 
-# poc-tcpreplay-09f0774-packet2tree-assertion
+# poc-tcpreplay-09f0774-packet2tree-assertion (CVE-2022-25484)
 The assertion `assert(l2len > 0);` in packet2tree() at tree.c is reachable when the user uses tcpprep to open a crafted pcap file.
 The variable `l2len` is assigned in get_l2len_protocol() at get.c. 
 
@@ -250,7 +250,8 @@ tcpreplay (master 09f0774)
    [POC_file]()
 
 ## Reference
-
+https://github.com/appneta/tcpreplay/issues/715  
+https://www.cve.org/CVERecord?id=CVE-2022-25484  
 
 ## Details
 ### GDB report

@@ -1,41 +1,41 @@
 # My CVE list
 
-## exiv2
-- CVE-2018-16336
-- CVE-2018-17229
-- CVE-2018-17230
-- CVE-2018-17282
-- CVE-2018-19607
+## 2018
+- CVE-2018-15209 (libtiff)
+- CVE-2018-16335 (libtiff)
+- CVE-2018-16336 (exiv2)
+- CVE-2018-17229 (exiv2)
+- CVE-2018-17230 (exiv2)
+- CVE-2018-17282 (exiv2)
+- CVE-2018-19607 (exiv2)
+- CVE-2018-20552 (tcpreplay)
+- CVE-2018-20553 (tcpreplay)
+- CVE-2018-21015 (gpac)
+- CVE-2018-21016 (gpac)
+- CVE-2018-21017 (gpac)
 
-## libtiff
-- CVE-2018-15209
-- CVE-2018-16335
+---
+## 2019
+- CVE-2019-16346 (ngiflib)
+- CVE-2019-16347 (ngiflib)
+- CVE-2019-16348 (libwav)
+- CVE-2019-16349 (bento4)
+- CVE-2019-16350 (ffjpeg)
+- CVE-2019-16351 (ffjpeg)
+- CVE-2019-16352 (ffjpeg)
 
-## tcpreplay
-- CVE-2018-20552
-- CVE-2018-20553
-- CVE-2021-45386
-- CVE-2021-45387
+---
+## 2020
+- CVE-2020-28176 (libwav)
+---
+## 2021
+- CVE-2021-36530 (ngiflib)
+- CVE-2021-36531 (ngiflib)
+- CVE-2021-45385 (ffjpeg)
+- CVE-2021-45386 (tcpreplay)
+- CVE-2021-45387 (tcpreplay)
 
-## gpac
-- CVE-2018-21015
-- CVE-2018-21016
-- CVE-2018-21017
-
-## ngiflib
-- CVE-2019-16346
-- CVE-2019-16347
-- CVE-2021-36530
-- CVE-2021-36531
-## libwav
-- CVE-2019-16348
-- CVE-2020-28176
-
-## bento4
-- CVE-2019-16349
-
-## ffjpeg
-- CVE-2019-16350
-- CVE-2019-16351
-- CVE-2019-16352
-- CVE-2021-45385
+---
+## 2022
+- CVE-2022-25484 (tcpreplay)
+- CVE-2022-28550 (jhead)
