@@ -8,7 +8,7 @@ A stack overflow occurs when tiffsplit processes a craft file.
 LIBTIFF, Version 4.4.0, master b2d61984
 
 ## Steps to reproduce
-Download the poc file from [here]() and run cmd 
+Download the poc file from [here](https://github.com/Marsman1996/pocs/blob/master/libtiff/poc-tiffsplit-b2d61984-_TIFFVGetField-stackoverflow?raw=true) and run cmd 
 `$ tiffsplit $POC`
 
 ## Platform
