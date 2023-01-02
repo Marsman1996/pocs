@@ -1,0 +1,3 @@
+var txtHello: TextField = new TextField();
+txtHello.text = "Hello World";
+this.addChild(txtHello);

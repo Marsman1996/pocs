@@ -83,3 +83,42 @@ Direct leak of 88 byte(s) in 1 object(s) allocated from:
 
 SUMMARY: AddressSanitizer: 88 byte(s) leaked in 1 allocation(s).
 ```
+
+# poc-makeswf-04aee52-swf5lex-leak
+
+## Summary
+A memory leak occurs when makeswf parse a valid ActionScript file, and the filename extension is not swf/png/dbl/jpg/jpeg.
+
+## Test Environment
+Ubuntu 20.04, 64 bit  
+libming (master 04aee52)
+
+## Steps to reproduce
+Download the poc file from [here](https://raw.githubusercontent.com/Marsman1996/pocs/master/libming/poc-makeswf-04aee52-swf5lex-leak) and run cmd 
+`$ makeswf $POC`
+
+## ASAN report
+```
+$ ./bin_asan/bin/makeswf ./poc-makeswf-04aee52-swf5lex-leak
+Output file name: out.swf
+Output compression level: 9
+Output SWF version: 6
+Preprocessing ./poc-makeswf-04aee52-swf5lex-leak... done.
+Compiling `out.swf.frame0.pp'... successfully compiled 108 bytes bytecode.
+Adding ./poc-makeswf-04aee52-swf5lex-leak to frame 0... done.
+Saving output to out.swf... done.
+
+=================================================================
+==1439170==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 10 byte(s) in 1 object(s) allocated from:
+    #0 0x43e077 in strdup /home/ubuntu178/Downloads/llvm12/projects/compiler-rt/lib/asan/asan_interceptors.cpp:437:3
+    #1 0x58c0bc in swf5lex /home/ubuntu178/cvelibf/test/libming/04aee52/build_asan/src/actioncompiler/../../../code/src/actioncompiler/swf5compiler.flex:360:27
+    #2 0x5ab109 in swf5parse /home/ubuntu178/cvelibf/test/libming/04aee52/build_asan/src/actioncompiler/swf5compiler.tab.c:3428:16
+    #3 0x511a7d in SWFAction_compile /home/ubuntu178/cvelibf/test/libming/04aee52/build_asan/src/blocks/../../../code/src/blocks/action.c:138:17
+    #4 0x5007da in makeswf_compile_source /home/ubuntu178/cvelibf/test/libming/04aee52/build_asan/util/../../code/util/makeswf_utils.c:132:6
+    #5 0x4fde3a in main /home/ubuntu178/cvelibf/test/libming/04aee52/build_asan/util/../../code/util/makeswf.c:412:9
+    #6 0x7f3391ca90b2 in __libc_start_main /build/glibc-eX1tMB/glibc-2.31/csu/../csu/libc-start.c:308:16
+
+SUMMARY: AddressSanitizer: 10 byte(s) leaked in 1 allocation(s).
+```
