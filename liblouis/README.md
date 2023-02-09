@@ -1,6 +1,8 @@
 # poc-API-6223f21-lou_logFile-BO
 ## Summary
-When long filename (larger than MAXSTRING, i.e., 2048) is given to API `lou_logFile()`, there will be a global-buffer-overflow.
+When long filename (larger than 256) is given to API `lou_logFile()`, there will be a global-buffer-overflow.
+
+https://github.com/liblouis/liblouis/blob/517f6f1f35fc5c57ac2f045caa168191bdeaadde/liblouis/logging.c#L123-L130
 
 ## Test Environment
 Ubuntu 16.04.3 LTS  
