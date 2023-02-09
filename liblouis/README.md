@@ -1,3 +1,78 @@
+# poc-API-6223f21-lou_logFile-BO
+## Summary
+When long filename (larger than MAXSTRING, i.e., 2048) is given to API `lou_logFile()`, there will be a global-buffer-overflow.
+
+## Test Environment
+Ubuntu 16.04.3 LTS  
+liblouis (master, 6223f21)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+2. Compile the [fuzz driver](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/driver-API-6223f21-lou_logFile-BO.c) and [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-6223f21-lou_logFile-BO)
+3. Compile the fuzz driver: `$ clang -g -fsanitize=address,fuzzer ./driver-API-6223f21-lou_logFile-BO.c ./bin_asan/lib/liblouis.a -I ./bin_asan/include/liblouis/ -o driver-API-6223f21-lou_logFile-BO`
+4. run the compiled driver: `$ ./driver-API-6223f21-lou_logFile-BO poc-API-6223f21-lou_logFile-BO`
+
+## ASAN report
+```
+$ ./driver-API-6223f21-lou_logFile-BO poc-API-6223f21-lou_logFile-BO
+Minimum size is 0
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2700932249
+INFO: Loaded 1 modules   (57 inline 8-bit counters): 57 [0x7b0360, 0x7b0399), 
+INFO: Loaded 1 PC tables (57 PCs): 57 [0x5705c0,0x570950), 
+./driver-API-6223f21-lou_logFile-BO: Running 1 inputs 1 time(s) each.
+Running: poc-API-6223f21-lou_logFile-BO
+=================================================================
+==20412==ERROR: AddressSanitizer: global-buffer-overflow on address 0x00000108b6e0 at pc 0x00000050dbf8 bp 0x7ffe6a0ffac0 sp 0x7ffe6a0ff280
+WRITE of size 4098 at 0x00000108b6e0 thread T0
+    #0 0x50dbf7 in strcpy /local/mnt/workspace/bcain_clang_vm-bcain-aus_3184/final/llvm-project/compiler-rt/lib/asan/asan_interceptors.cpp:423:5
+    #1 0x55492e in lou_logFile /opt/disk/marsman/liblouis/6223f21/build_asan/liblouis/../../code/liblouis/logging.c:130:34
+    #2 0x553634 in AFG_func /opt/disk/marsman/liblouis/6223f21/./driver-API-6223f21-lou_logFile-BO.c:17:2
+    #3 0x553850 in LLVMFuzzerTestOneInput /opt/disk/marsman/liblouis/6223f21/./driver-API-6223f21-lou_logFile-BO.c:44:2
+    #4 0x459911 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) /local/mnt/workspace/bcain_clang_vm-bcain-aus_3184/final/llvm-project/compiler-rt/lib/fuzzer/FuzzerLoop.cpp:599:15
+    #5 0x4435d2 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) /local/mnt/workspace/bcain_clang_vm-bcain-aus_3184/final/llvm-project/compiler-rt/lib/fuzzer/FuzzerDriver.cpp:323:6
+    #6 0x449940 in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) /local/mnt/workspace/bcain_clang_vm-bcain-aus_3184/final/llvm-project/compiler-rt/lib/fuzzer/FuzzerDriver.cpp:856:9
+    #7 0x4738c2 in main /local/mnt/workspace/bcain_clang_vm-bcain-aus_3184/final/llvm-project/compiler-rt/lib/fuzzer/FuzzerMain.cpp:20:10
+    #8 0x7f8ea559983f in __libc_start_main /build/glibc-S7Ft5T/glibc-2.23/csu/../csu/libc-start.c:291
+    #9 0x41e0d8 in _start (/opt/disk/marsman/liblouis/6223f21/driver-API-6223f21-lou_logFile-BO+0x41e0d8)
+
+0x00000108b6e0 is located 0 bytes to the right of global variable 'initialLogFileName' defined in '../../code/liblouis/logging.c:121:13' (0x108b5e0) of size 256
+SUMMARY: AddressSanitizer: global-buffer-overflow /local/mnt/workspace/bcain_clang_vm-bcain-aus_3184/final/llvm-project/compiler-rt/lib/asan/asan_interceptors.cpp:423:5 in strcpy
+Shadow bytes around the buggy address:
+  0x000080209680: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f9 f9
+  0x000080209690: f9 f9 f9 f9 04 f9 f9 f9 f9 f9 f9 f9 00 f9 f9 f9
+  0x0000802096a0: f9 f9 f9 f9 04 f9 f9 f9 f9 f9 f9 f9 00 f9 f9 f9
+  0x0000802096b0: f9 f9 f9 f9 00 f9 f9 f9 f9 f9 f9 f9 00 00 00 00
+  0x0000802096c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0000802096d0: 00 00 00 00 00 00 00 00 00 00 00 00[f9]f9 f9 f9
+  0x0000802096e0: f9 f9 f9 f9 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0000802096f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000080209700: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000080209710: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000080209720: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==20412==ABORTING
+```
+
 # poc-lou_trace-6223f21-resolveSubtable-BO
 ## Summary
 When long name table is given to `lou_trace`, there will be a heap-buffer-overflow.
@@ -156,7 +231,11 @@ Program received signal SIGABRT, Aborted.
 # poc-API-6223f21-lou_setDataPath-BO
 
 ## Summary
-When long path (larger than MAXSTRING, i.e., 2048) is given to API 'lou_setDataPath()', there will be a global-buffer-overflow.
+When long path (larger than MAXSTRING, i.e., 2048) is given to API `lou_setDataPath()`, there will be a global-buffer-overflow.
+
+Similar to #1291, because liblouis does not check the input length.
+
+https://github.com/liblouis/liblouis/blob/63722f0428cd4e98d7446658162fb71732d892bb/liblouis/compileTranslationTable.c#L58-L62
 
 ## Test Environment
 Ubuntu 16.04.3 LTS
