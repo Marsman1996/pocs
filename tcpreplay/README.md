@@ -247,7 +247,7 @@ tcpreplay (master 09f0774)
 1. Get the Tcpreplay source code (master 09f0774) and compile it.
 2. Run command: `$ tcpprep --auto=bridge --pcap=$POC --cachefile=/dev/null`  
    The POC file could be downloaded here:  
-   [POC_file]()
+   [POC_file](https://raw.githubusercontent.com/Marsman1996/pocs/master/tcpreplay/poc-tcpreplay-09f0774-packet2tree-assertion)
 
 ## Reference
 https://github.com/appneta/tcpreplay/issues/715  
@@ -277,4 +277,61 @@ tcpprep: ../../code/src/tree.c:746: tcpr_tree_t *packet2tree(const u_char *, con
 Program received signal SIGABRT, Aborted.
 0x00007ffff7194438 in __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:54
 54      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+```
+
+# poc-tcprewrite-bcb107a-tcpedit_dlt_cleanup-assertion
+There is a reachable assertion in `tcpedit_dlt_cleanup()` when when the user uses `tcprewrite` to open a crafted pcap file in `DLT_JUNIPER_ETHER` mode.
+
+## Test Environment
+Ubuntu 20.04, 64bit  
+tcpreplay (master bcb107a)
+
+```
+./bin_normal/bin/tcprewrite -V
+tcprewrite version: 4.4.3 (build git:v4.4.3)
+Copyright 2013-2022 by Fred Klassen <tcpreplay at appneta dot com> - AppNeta
+Copyright 2000-2012 by Aaron Turner <aturner at synfin dot net>
+The entire Tcpreplay Suite is licensed under the GPLv3
+Cache file supported: 04
+Not compiled with libdnet.
+Compiled against libpcap: 1.9.1
+64 bit packet counters: enabled
+Verbose printing via tcpdump: enabled
+Fragroute engine: disabled
+```
+
+## How to trigger
+1. Get the Tcpreplay source code and compile it.
+  ```
+  $ ./configure
+  $ make
+  ```
+2. Run Command `$ ./tcprewrite --dlt="jnpr_eth" -i $POC -o /dev/null`
+  The POC file could be downloaded here:
+  [POC file](https://raw.githubusercontent.com/Marsman1996/pocs/master/tcpreplay/poc-tcprewrite-bcb107a-tcpedit_dlt_cleanup-assertion)
+
+## GDB report
+```
+$ gdb --args ./bin_normal/bin/tcprewrite --dlt="jnpr_eth" -i ./poc-tcprewrite-bcb107a-tcpedit_dlt_cleanup-assertion -o /dev/null
+
+(gdb) r
+Starting program: /home/ubuntu178/cvelibf/test/tcpreplay/latest/bin_normal/bin/tcprewrite --dlt=jnpr_eth -i ./poc-tcprewrite-bcb107a-tcpedit_dlt_cleanup-assertion -o /dev/null
+Warning: ./poc-tcprewrite-bcb107a-tcpedit_dlt_cleanup-assertion was captured using a snaplen of 96 bytes.  This may mean you have truncated packets.
+tcprewrite: plugins/dlt_plugins.c:462: tcpedit_dlt_cleanup: Assertion `ctx' failed.
+
+Program received signal SIGABRT, Aborted.
+__GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
+50      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) bt
+#0  __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
+#1  0x00007ffff7d6d859 in __GI_abort () at abort.c:79
+#2  0x00007ffff7d6d729 in __assert_fail_base (fmt=0x7ffff7f03588 "%s%s%s:%u: %s%sAssertion `%s' failed.\n%n", assertion=0x555555572ae6 "ctx", file=0x555555572ad0 "plugins/dlt_plugins.c", line=462, 
+    function=<optimized out>) at assert.c:92
+#3  0x00007ffff7d7ef36 in __GI___assert_fail (assertion=0x555555572ae6 "ctx", file=0x555555572ad0 "plugins/dlt_plugins.c", line=462, function=0x555555572fb0 <__PRETTY_FUNCTION__.7740> "tcpedit_dlt_cleanup")
+    at assert.c:101
+#4  0x000055555556156d in tcpedit_dlt_cleanup (ctx=0x0) at plugins/dlt_plugins.c:462
+#5  0x0000555555569aca in dlt_jnpr_ether_cleanup (ctx=0x555555580090) at plugins/dlt_jnpr_ether/jnpr_ether.c:171
+#6  0x000055555556158c in tcpedit_dlt_cleanup (ctx=0x555555580090) at plugins/dlt_plugins.c:466
+#7  0x000055555555a763 in tcpedit_close (tcpedit_ex=0x55555557db60 <tcpedit>) at tcpedit.c:599
+#8  0x0000555555558f02 in main (argc=0, argv=0x7fffffffde38) at tcprewrite.c:154
 ```

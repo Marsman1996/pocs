@@ -1,4 +1,4 @@
-# poc-makeswf-04aee52-newBuffer-leak
+# poc-makeswf-04aee52-newBuffer-leak (CVE-2023-23051)
 
 ## Summary
 A memory leak occurs when makeswf parse a crafted file with unexpected EOF, and the filename extension is not swf/png/dbl/jpg/jpeg.
@@ -55,7 +55,7 @@ Indirect leak of 128 byte(s) in 1 object(s) allocated from:
 SUMMARY: AddressSanitizer: 168 byte(s) leaked in 2 allocation(s).
 ```
 
-# poc-makeswf-04aee52-openswf-leak.swf
+# poc-makeswf-04aee52-openswf-leak.swf (CVE-2023-23052)
 
 ## Summary
 A memory leak occurs when makeswf parse a valid swf file, and the filename extension is `.swf`.
@@ -96,7 +96,7 @@ Direct leak of 88 byte(s) in 1 object(s) allocated from:
 SUMMARY: AddressSanitizer: 88 byte(s) leaked in 1 allocation(s).
 ```
 
-# poc-makeswf-04aee52-swf5lex-leak
+# poc-makeswf-04aee52-swf5lex-leak (CVE-2023-23053)
 
 ## Summary
 A memory leak occurs when makeswf parse a valid ActionScript file, and the filename extension is not swf/png/dbl/jpg/jpeg.
@@ -140,7 +140,7 @@ Direct leak of 10 byte(s) in 1 object(s) allocated from:
 SUMMARY: AddressSanitizer: 10 byte(s) leaked in 1 allocation(s).
 ```
 
-# poc-API-04aee52-SWFShape_drawCubic-infinite_loop
+# poc-API-04aee52-SWFShape_drawCubic-infinite_loop (CVE-2023-23054)
 
 ## Summary
 An infinite loop occurs when API function SWFShape_drawCubic is given crafted arguments.

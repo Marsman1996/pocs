@@ -40,3 +40,9 @@
 - CVE-2022-25484 (tcpreplay)
 - CVE-2022-28550 (jhead)
 - CVE-2022-34526 (libtiff)
+
+## 2023
+- CVE-2023-23051 (libming)
+- CVE-2023-23052 (libming)
+- CVE-2023-23053 (libming)
+- CVE-2023-23054 (libming)
