@@ -279,7 +279,7 @@ Program received signal SIGABRT, Aborted.
 54      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
 ```
 
-# poc-tcprewrite-bcb107a-tcpedit_dlt_cleanup-assertion
+# poc-tcprewrite-bcb107a-tcpedit_dlt_cleanup-assertion (CVE-2023-27783)
 There is a reachable assertion in `tcpedit_dlt_cleanup()` when the user uses `tcprewrite` to open a crafted pcap file in `DLT_JUNIPER_ETHER` mode.
 
 ## Test Environment
@@ -336,7 +336,7 @@ __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
 #8  0x0000555555558f02 in main (argc=0, argv=0x7fffffffde38) at tcprewrite.c:154
 ```
 
-# cmd-tcpprep-bcb107a-macinstring-SEGV
+# cmd-tcpprep-bcb107a-macinstring-SEGV (CVE-2023-27786)
 There is a NULL Pointer Dereference in `macinstring()` when the user passes empty mac string to `tcpprep` in Source MAC split mode.  
 
 
@@ -405,7 +405,7 @@ Program received signal SIGSEGV, Segmentation fault.
 #2  0x0000555555558d23 in main (argc=5, argv=0x7fffffffc2d8) at tcpprep.c:144
 ```
 
-# cmd-tcpprep-bcb107a-cidr2cidr-assertion
+# cmd-tcpprep-bcb107a-cidr2cidr-assertion (CVE-2023-27789)
 There is a reachable assertion in `cidr2cidr()` when the user passes empty cidr string to `tcpprep` in CIDR-split mode.  
 
 ## Test Environment
@@ -464,7 +464,7 @@ __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
 #10 0x000055555555899c in main (argc=4, argv=0x7fffffffc2d8) at tcpprep.c:89
 ```
 
-# cmd-tcprewrite-bcb107a-parse_endpoints-SEGV
+# cmd-tcprewrite-bcb107a-parse_endpoints-SEGV (CVE-2023-27785)
 There is a NULL Pointer Dereference in `parse_endpoints()` when the user passes empty endpoints string to `tcprewrite` with option `--endpoints`.  
 
 
@@ -516,7 +516,7 @@ Program received signal SIGSEGV, Segmentation fault.
 #3  0x0000555555558c23 in main (argc=0, argv=0x7fffffffc2f0) at tcprewrite.c:89
 ```
 
-# cmd-tcprewrite-bcb107a-ports2PORT-assertion
+# cmd-tcprewrite-bcb107a-ports2PORT-assertion (CVE-2023-27788)
 There is a reachable assertion in `ports2PORT()` when the user passes empty portmap string to `tcprewrite` with option `--portmap`.  
 
 
@@ -544,7 +544,7 @@ Fragroute engine: disabled
   $ ./configure
   $ make
   ```
-2. Run Command `$ ./tcprewrite --endpoints="" -i ./test.pcap -o /dev/null --cachefile=./test.cache`  
+2. Run Command `$ ./tcprewrite --portmap="" -i ./test.pcap -o /dev/null`  
    The file `test.pcap` is from tcpreplay codebase, which is located in `test/test.pcap`.
 
 ## Details
@@ -573,7 +573,7 @@ __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
 #7  0x0000555555558c23 in main (argc=0, argv=0x7fffffffc2f8) at tcprewrite.c:89
 ```
 
-# poc-tcprewrite-bcb107a-read_hexstring-SEGV
+# poc-tcprewrite-bcb107a-read_hexstring-SEGV (CVE-2023-27784)
 There is a NULL Pointer Dereference in `read_hexstring()` when the user passes empty user dlink string to `tcprewrite` with option `--user-dlink` when the program process the pcap file whose data link type is DLT_USER0.  
 
 
@@ -601,7 +601,7 @@ Fragroute engine: disabled
   $ ./configure
   $ make
   ```
-1. Run Command `$ ./tcprewrite --user-dlink="" -i $POC -o /dev/null`  
+2. Run Command `$ ./tcprewrite --user-dlink="" -i $POC -o /dev/null`  
    The POC file could be downloaded in [POC file](https://raw.githubusercontent.com/Marsman1996/pocs/master/tcpreplay/poc-tcprewrite-bcb107a-read_hexstring-SEGV)
 
 ## Details
@@ -628,4 +628,59 @@ __rawmemchr_avx2 () at ../sysdeps/x86_64/multiarch/memchr-avx2.S:65
 #7  0x0000555555560ca5 in tcpedit_dlt_post_args (tcpedit=0x55555557ffe0) at plugins/dlt_plugins.c:210
 #8  0x000055555555b575 in tcpedit_post_args (tcpedit=0x55555557ffe0) at parse_args.c:252
 #9  0x0000555555558c23 in main (argc=0, argv=0x7fffffffc2e8) at tcprewrite.c:89
+```
+
+# cmd-tcpprep-bcb107a-parse_list-SEGV (CVE-2023-27787) 
+There is a NULL Pointer Dereference in `parse_list()` when the user passes specific size (i.e., 2) of include string to `tcpprep` with option `--include`.  
+
+
+## Test Environment
+Ubuntu 20.04, 64bit  
+tcpreplay (master bcb107a)
+
+```
+./bin_normal/bin/tcprewrite -V
+tcprewrite version: 4.4.3 (build git:v4.4.3)
+Copyright 2013-2022 by Fred Klassen <tcpreplay at appneta dot com> - AppNeta
+Copyright 2000-2012 by Aaron Turner <aturner at synfin dot net>
+The entire Tcpreplay Suite is licensed under the GPLv3
+Cache file supported: 04
+Not compiled with libdnet.
+Compiled against libpcap: 1.9.1
+64 bit packet counters: enabled
+Verbose printing via tcpdump: enabled
+Fragroute engine: disabled
+```
+
+## How to trigger
+1. Get the Tcpreplay source code and compile it.
+  ```
+  $ ./configure
+  $ make
+  ```
+2. Run Command `$ ./tcpprep --include="P "`  
+
+## Details
+This crash is due to the program does not check the string returned by `strtok_r()` in `parse_list()`.
+
+### GDB report
+```
+$ gdb --args ./bin_normal/bin/tcpprep --include="P "
+
+(gdb) r
+Starting program: /home/ubuntu178/cvelibf/test/tcpreplay/latest/bin_normal/bin/tcpprep --include=P\ 
+
+Program received signal SIGSEGV, Segmentation fault.
+__strlen_avx2 () at ../sysdeps/x86_64/multiarch/strlen-avx2.S:65
+65      ../sysdeps/x86_64/multiarch/strlen-avx2.S: No such file or directory.
+(gdb) bt
+#0  __strlen_avx2 () at ../sysdeps/x86_64/multiarch/strlen-avx2.S:65
+#1  0x00007ffff7e4982b in __GI___regexec (preg=0x7fffffffd650, string=0x0, nmatch=0, pmatch=0x0, eflags=0) at regexec.c:210
+#2  0x000055555555ed19 in parse_list (listdata=0x55555556db38, ourstr=0x55555558dbf2 "") at list.c:81
+#3  0x00005555555614a7 in parse_xX_str (xX=0x55555556db30, str=0x55555558dbf2 "", bpf=0x55555556db50) at xX.c:84
+#4  0x00005555555581fc in doOptInclude (pOptions=0x55555556bc00 <tcpprepOptions>, pOptDesc=0x55555556b3c8 <optDesc+936>) at tcpprep_opts.c:1411
+#5  0x00007ffff7f4011e in ?? () from /lib/x86_64-linux-gnu/libopts.so.25
+#6  0x00007ffff7f48964 in ?? () from /lib/x86_64-linux-gnu/libopts.so.25
+#7  0x00007ffff7f4b7c8 in optionProcess () from /lib/x86_64-linux-gnu/libopts.so.25
+#8  0x000055555555899c in main (argc=2, argv=0x7fffffffde88) at tcpprep.c:89
 ```

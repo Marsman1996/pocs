@@ -1,4 +1,4 @@
-# poc-API-6223f21-lou_logFile-BO
+# poc-API-6223f21-lou_logFile-BO (CVE-2023-26768)
 ## Summary
 When long filename (larger than 256) is given to API `lou_logFile()`, there will be a global-buffer-overflow.
 
@@ -75,7 +75,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ==20412==ABORTING
 ```
 
-# poc-lou_trace-6223f21-resolveSubtable-BO
+# poc-lou_trace-6223f21-resolveSubtable-BO (CVE-2023-26769)
 ## Summary
 When long name table is given to `lou_trace`, there will be a heap-buffer-overflow.
 
@@ -230,7 +230,7 @@ Program received signal SIGABRT, Aborted.
 ```
 
 
-# poc-API-6223f21-lou_setDataPath-BO
+# poc-API-6223f21-lou_setDataPath-BO (CVE-2023-26767)
 
 ## Summary
 When long path (larger than MAXSTRING, i.e., 2048) is given to API `lou_setDataPath()`, there will be a global-buffer-overflow.
