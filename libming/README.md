@@ -289,3 +289,84 @@ ALARM: working on the last Unit for 1201 seconds
 
 SUMMARY: libFuzzer: timeout
 ```
+
+# poc-makeswf-04aee52-r_readc-HBO.swf
+## Summary
+A heap buffer overflow occurs when makeswf parse a invalid swf file, and the filename extension is `.swf`.
+
+## Test Environment
+Ubuntu 20.04, 64 bit  
+libming (master 04aee52)
+
+## Steps to reproduce
+1. compile libming with ASAN
+```
+$ CC="clang -fsanitize=address,fuzzer-no-link -g" CFLAGS+=" -fcommon" ./configure 
+$ make
+```
+2. Download the poc file from [here](https://raw.githubusercontent.com/Marsman1996/pocs/master/libming/poc-makeswf-04aee52-r_readc-HBO.swf) and run cmd 
+`$ makeswf $POC`
+
+## ASAN report
+```
+$ ./bin_asan/bin/makeswf ./poc-makeswf-04aee52-r_readc-HBO.swf
+Output file name: out.swf
+Output compression level: 9
+Output SWF version: 6
+=================================================================
+==5625==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60800000013f at pc 0x0000004f15b5 bp 0x7fff376560d0 sp 0x7fff376560c8
+WRITE of size 1 at 0x60800000013f thread T0
+    #0 0x4f15b4 in r_readc /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:264:34
+    #1 0x4f1a37 in getbits /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:143:18
+    #2 0x4f1656 in rect /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:169:9
+    #3 0x4efe15 in openswf /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:303:2
+    #4 0x4eedbe in newSWFPrebuiltClip_fromInput /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:1302:8
+    #5 0x4cbea3 in embed_swf /opt/disk/marsman/libming/04aee52/build_asan/util/makeswf.c:699:14
+    #6 0x4ca4d9 in main /opt/disk/marsman/libming/04aee52/build_asan/util/makeswf.c:401:4
+    #7 0x7f0aa6b3d83f in __libc_start_main /build/glibc-S7Ft5T/glibc-2.23/csu/../csu/libc-start.c:291
+    #8 0x41c5a8 in _start (/opt/disk/marsman/libming/04aee52/bin_asan/bin/makeswf+0x41c5a8)
+
+0x60800000013f is located 199 bytes to the right of 88-byte region [0x608000000020,0x608000000078)
+allocated by thread T0 here:
+    #0 0x4975fd in malloc /local/mnt/workspace/bcain_clang_vm-bcain-aus_3184/final/llvm-project/compiler-rt/lib/asan/asan_malloc_linux.cpp:145:3
+    #1 0x4ef8d8 in openswf /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:271:41
+    #2 0x4eedbe in newSWFPrebuiltClip_fromInput /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:1302:8
+    #3 0x4cbea3 in embed_swf /opt/disk/marsman/libming/04aee52/build_asan/util/makeswf.c:699:14
+    #4 0x4ca4d9 in main /opt/disk/marsman/libming/04aee52/build_asan/util/makeswf.c:401:4
+    #5 0x7f0aa6b3d83f in __libc_start_main /build/glibc-S7Ft5T/glibc-2.23/csu/../csu/libc-start.c:291
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /opt/disk/marsman/libming/04aee52/build_asan/src/blocks/fromswf.c:264:34 in r_readc
+Shadow bytes around the buggy address:
+  0x0c107fff7fd0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c107fff7fe0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c107fff7ff0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c107fff8000: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 fa
+  0x0c107fff8010: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x0c107fff8020: fa fa fa fa fa fa fa[fa]fa fa fa fa fa fa fa fa
+  0x0c107fff8030: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c107fff8040: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c107fff8050: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c107fff8060: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c107fff8070: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==5625==ABORTING
+```

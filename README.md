@@ -48,9 +48,9 @@
 | CVE ID         | Project   | CVSS 3.x Score |
 | -------------- | --------- | -------------- |
 | CVE-2022-25484 | tcpreplay | 5.5 MEDIUM     |
-| CVE-2022-28550 | jhead     |
+| CVE-2022-28550 | jhead     | 9.8 CRITICAL   |
 | CVE-2022-30857 | ngiflib   |
-| CVE-2022-30858 | ngiflib   |
+| CVE-2022-30858 | ngiflib   | 6.5 MEDIUM     |
 | CVE-2022-34526 | libtiff   | 6.5 MEDIUM     |
 
 ## 2023
