@@ -7521,15 +7521,15 @@ Printing stack trace:
 Reachable assertion in `check_segment_align` when running program whose `p_offset` and `p_filesz` is 0
 
 ### Reference
-https://github.com/asterinas/asterinas/issues/
+https://github.com/asterinas/asterinas/issues/1656
 
 ### Describe the bug
-There is a reachable assertion in `check_segment_align()` at kernel/src/process/program_loader/elf/load_elf.rs:377 when user runs specific program.
+There is a reachable assertion in `check_segment_align()` at kernel/src/process/program_loader/elf/load_elf.rs:377 when user runs specific program whose `p_offset` and `p_filesz` is 0.
 
 https://github.com/asterinas/asterinas/blob/5313689d6fa91596f4bc52bf6fb866bf6a7a706f/kernel/src/process/program_loader/elf/load_elf.rs#L377
 
 ### To Reproduce
-Download the sample program and run.
+Download the [sample program](https://github.com/Marsman1996/pocs/raw/refs/heads/master/asterinas/syscall-execve-5313689-check_segment_align-panic) and run.
 
 ### Expected behavior
 Asterinas shall not panic when run the program.
@@ -7723,18 +7723,32 @@ make: *** [Makefile:210: run] Error 1
 ```
 
 # syscall-execve-5313689-read_updated_state-panic
-Reachable assertion in `is_intersected` when run specific program 
+Reachable assertion in `is_intersected` when running program whose `p_offset` and `p_filesz` is 0 and segment is aligned
 
 ### Reference
 https://github.com/asterinas/asterinas/issues/
 
 ### Describe the bug
-There is a reachable assertion in `is_intersected()` at kernel/src/vm/vmar/mod.rs:672 when user runs specific program.
+There is a reachable assertion in `is_intersected()` at kernel/src/vm/vmar/mod.rs:672 when user runs program whose `p_offset` and `p_filesz` is 0 and segment is aligned.
+
+```
+$ readelf -l syscall-execve-5313689-read_updated_state-panic 
+
+Elf file type is EXEC (Executable file)
+Entry point 0x401650
+There are 10 program headers, starting at offset 64
+
+Program Headers:
+  Type           Offset             VirtAddr           PhysAddr
+                 FileSiz            MemSiz              Flags  Align
+  LOAD           0x0000000000000000 0x00000000004c0000 0x00000000004c0000
+                 0x0000000000000000 0x000000000000b490  RW     0x1000
+```
 
 https://github.com/asterinas/asterinas/blob/5313689d6fa91596f4bc52bf6fb866bf6a7a706f/kernel/src/vm/vmar/mod.rs#L671-L674
 
 ### To Reproduce
-Just run the provided sample program.
+Download the [sample program](https://github.com/Marsman1996/pocs/raw/refs/heads/master/asterinas/syscall-execve-5313689-read_updated_state-panic) and run.
 
 ### Expected behavior
 Asterinas shall not panic when run the program.
