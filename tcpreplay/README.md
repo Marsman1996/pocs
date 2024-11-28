@@ -684,3 +684,56 @@ __strlen_avx2 () at ../sysdeps/x86_64/multiarch/strlen-avx2.S:65
 #7  0x00007ffff7f4b7c8 in optionProcess () from /lib/x86_64-linux-gnu/libopts.so.25
 #8  0x000055555555899c in main (argc=2, argv=0x7fffffffde88) at tcpprep.c:89
 ```
+
+# poc-tcpreplay-43693c4-dlt_en10mb_merge_layer3-assertion
+The assertion `ctx->decoded_extra_size == sizeof(*extra);` in `dlt_en10mb_merge_layer3()` at `en10mb.c:815` is reachable when the user uses tcpreplay to open a crafted pcap file.
+
+## Test Environment
+Ubuntu 20.04.6, 64bit  
+tcpreplay (master 43693c4)
+
+```
+$ ./bin_normal/bin/tcprewrite --version
+tcprewrite version: 4.4.4 (build git:)
+Copyright 2013-2022 by Fred Klassen <tcpreplay at appneta dot com> - AppNeta
+Copyright 2000-2012 by Aaron Turner <aturner at synfin dot net>
+The entire Tcpreplay Suite is licensed under the GPLv3
+Cache file supported: 04
+Not compiled with libdnet.
+Compiled against libpcap: 1.9.1
+64 bit packet counters: enabled
+Verbose printing via tcpdump: enabled
+Fragroute engine: disabled
+```
+
+## How to trigger
+1. Get the Tcpreplay source code and compile it.
+  ```
+  $ ./configure
+  $ make
+  ```
+2. Run Command `$ /tcprewrite --dlt=enet --enet-dmac=00:12:13:14:15:16,00:22:33:44:55:66 --enet-smac=00:12:13:14:15:16,00:22:33:44:55:66 -o /dev/null -i $POC`  
+   The POC file could be downloaded here:  
+   [POC_file](https://raw.githubusercontent.com/Marsman1996/pocs/master/tcpreplay/poc-tcpreplay-43693c4-dlt_en10mb_merge_layer3-assertion)
+
+## Details
+The `ctx->decoded_extra` is initilized in `dlt_raw_init()`, so the `ctx->decoded_extra_size` is set to `sizeof(raw_extra_t)` (i.e., 262166), while in `dlt_en10mb_merge_layer3()` the size of `extra` is 20.
+As a result, the assertion is triggered.
+
+### GDB report
+```
+(gdb) bt
+#0  __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
+#1  0x00007ffff7d95859 in __GI_abort () at abort.c:79
+#2  0x00007ffff7d95729 in __assert_fail_base (fmt=0x7ffff7f2b588 "%s%s%s:%u: %s%sAssertion `%s' failed.\n%n", assertion=0x55555558a7a8 "ctx->decoded_extra_size == sizeof(*extra)", 
+    file=0x55555558a380 "../../../code/src/tcpedit/plugins/dlt_en10mb/en10mb.c", line=815, function=<optimized out>) at assert.c:92
+#3  0x00007ffff7da6fd6 in __GI___assert_fail (assertion=0x55555558a7a8 "ctx->decoded_extra_size == sizeof(*extra)", file=0x55555558a380 "../../../code/src/tcpedit/plugins/dlt_en10mb/en10mb.c", 
+    line=815, function=0x55555558aae0 <__PRETTY_FUNCTION__.7520> "dlt_en10mb_merge_layer3") at assert.c:101
+#4  0x00005555555664a3 in dlt_en10mb_merge_layer3 (ctx=0x55555559f830, packet=0x7ffff7cee010 "", pktlen=640, ipv4_data=0x7ffff7cee01e "OOOOOOlOOO\354\355OeOOOOI", 'O' <repeats 78 times>, 
+    ipv6_data=0x0) at ../../../code/src/tcpedit/plugins/dlt_en10mb/en10mb.c:815
+#5  0x0000555555563763 in tcpedit_dlt_merge_l3data (ctx=0x55555559f830, dlt=1, packet=0x7ffff7cee010 "", pktlen=640, 
+    ipv4_data=0x7ffff7cee01e "OOOOOOlOOO\354\355OeOOOOI", 'O' <repeats 78 times>, ipv6_data=0x0) at ../../../code/src/tcpedit/plugins/dlt_plugins.c:393
+#6  0x000055555555c52a in tcpedit_packet (tcpedit=0x55555559ef80, pkthdr=0x7fffffffda90, pktdata=0x55555559bef0 <pktdata_buff>, direction=TCPR_DIR_C2S) at ../../../code/src/tcpedit/tcpedit.c:345
+#7  0x000055555555b7a3 in rewrite_packets (tcpedit_ctx=0x55555559ef80, pin=0x55555559e4d0, pout=0x5555555a0470) at ../../code/src/tcprewrite.c:293
+#8  0x000055555555b366 in main (argc=0, argv=0x7fffffffdc38) at ../../code/src/tcprewrite.c:137
+```
