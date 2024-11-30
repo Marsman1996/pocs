@@ -7722,6 +7722,200 @@ Printing stack trace:
 make: *** [Makefile:210: run] Error 1
 ```
 
+# syscall-execve-5313689-check_segment_align-panic-2
+Reachable assertion in `check_segment_align` when running program whose `align` is not power of 2
+
+### Reference
+https://github.com/asterinas/asterinas/issues/1656
+
+### Describe the bug
+There is a reachable assertion in `check_segment_align()` at kernel/src/process/program_loader/elf/load_elf.rs:373 when user runs specific program whose `align` is not power of 2.
+
+https://github.com/asterinas/asterinas/blob/5313689d6fa91596f4bc52bf6fb866bf6a7a706f/kernel/src/process/program_loader/elf/load_elf.rs#L373
+
+### To Reproduce
+Download the [sample program](https://github.com/Marsman1996/pocs/raw/refs/heads/master/asterinas/syscall-execve-5313689-check_segment_align-panic-2) and run.
+
+### Expected behavior
+Asterinas shall not panic when run the program.
+
+### Environment
+- Official docker asterinas/asterinas:0.9.4
+- Intel(R) Xeon(R) Gold 6230R CPU @ 2.10GHz
+- Asterinas version: main 5313689
+
+### Logs
+```
+~ # /root/syscall-execve-5313689-check_segment_align-panic-2 
+[    61.946] ERROR: Uncaught panic:
+        assertion failed: align.is_power_of_two()
+        at /root/asterinas/kernel/src/process/program_loader/elf/load_elf.rs:373
+        on CPU 0 by thread Some(Thread { task: (Weak), data: Any { .. }, status: AtomicThreadStatus(1), priority: AtomicPriority(120), cpu_affinity: AtomicCpuSet { bits: [1] } })
+Printing stack trace:
+   1: fn 0xffffffff887c0190 - pc 0xffffffff887c01fa / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7cf10;
+
+   2: fn 0xffffffff881599e0 - pc 0xffffffff8815a969 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7cf70;
+
+   3: fn 0xffffffff881599d0 - pc 0xffffffff881599da / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7d6f0;
+
+   4: fn 0xffffffff88049000 - pc 0xffffffff8804900a / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7d700;
+
+   5: fn 0xffffffff8898e3f0 - pc 0xffffffff8898e434 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7d710;
+
+   6: fn 0xffffffff8898e510 - pc 0xffffffff8898e550 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7d750;
+
+   7: fn 0xffffffff880b8aa0 - pc 0xffffffff880b8b94 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7d7c0;
+
+   8: fn 0xffffffff880b6380 - pc 0xffffffff880b663f / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7d880;
+
+   9: fn 0xffffffff880b5ac0 - pc 0xffffffff880b5d9b / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7dab0;
+
+  10: fn 0xffffffff880b46a0 - pc 0xffffffff880b49ac / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7ddd0;
+
+  11: fn 0xffffffff8814c070 - pc 0xffffffff8814ce46 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7e450;
+
+  12: fn 0xffffffff8845c270 - pc 0xffffffff8845d036 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd7fa00;
+
+  13: fn 0xffffffff8845b1c0 - pc 0xffffffff8845b4a3 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd80a40;
+
+  14: fn 0xffffffff882a12f0 - pc 0xffffffff882b5689 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd80c80;
+
+  15: fn 0xffffffff88152f50 - pc 0xffffffff88152fde / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd98fd0;
+
+  16: fn 0xffffffff8829c690 - pc 0xffffffff8829d2ec / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99170;
+
+  17: fn 0xffffffff8825b3c0 - pc 0xffffffff8825b3c6 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99bf0;
+
+  18: fn 0xffffffff8835cbb0 - pc 0xffffffff8835cbc7 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99c00;
+
+  19: fn 0xffffffff8835ef70 - pc 0xffffffff8835ef88 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99c20;
+
+  20: fn 0xffffffff8835ca90 - pc 0xffffffff8835cabf / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99c40;
+
+  21: fn 0xffffffff881897f0 - pc 0xffffffff88189802 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99c90;
+
+  22: fn 0xffffffff8813edf0 - pc 0xffffffff8813ee06 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99cc0;
+
+  23: fn 0xffffffff880674d0 - pc 0xffffffff880674dc / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99f00;
+
+  24: fn 0xffffffff882595c0 - pc 0xffffffff882595ce / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99f30;
+
+  25: fn 0xffffffff888851a0 - pc 0xffffffff888851c8 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99f50;
+
+  26: fn 0xffffffff888729a0 - pc 0xffffffff88872a6e / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd99f90;
+
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff886d12f6; rdi 0xffffffff88806437; rbp                0x0; rsp 0xffffdfffffd9a000;
+
+[OSDK] The kernel seems panicked. Parsing stack trace for source lines:
+(  1) /root/asterinas/ostd/src/panic.rs:107
+(  2) /root/asterinas/kernel/src/thread/oops.rs:124
+(  3) ??:?
+(  4) 4dvza348sp3fpuqdly0jf34a0:?
+(  5) ??:?
+(  6) /root/.rustup/toolchains/nightly-2024-10-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:220
+(  7) 1fni8mv8eny7sdd4eb3sd112c:?
+(  8) /root/asterinas/kernel/src/process/program_loader/elf/load_elf.rs:209
+(  9) /root/asterinas/kernel/src/process/program_loader/elf/load_elf.rs:128
+( 10) /root/asterinas/kernel/src/process/program_loader/elf/load_elf.rs:46
+( 11) /root/asterinas/kernel/src/process/program_loader/mod.rs:66
+( 12) /root/asterinas/kernel/src/syscall/execve.rs:117
+( 13) /root/asterinas/kernel/src/syscall/execve.rs:33
+( 14) /root/asterinas/kernel/src/syscall/mod.rs:175
+( 15) /root/asterinas/kernel/src/syscall/mod.rs:329
+( 16) /root/asterinas/kernel/src/thread/task.rs:70
+( 17) /root/.rustup/toolchains/nightly-2024-10-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250
+( 18) /root/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unwinding-0.2.4/src/panicking.rs:56
+( 19) b2qbejy1xt7p6plhnjoacb7iw:?
+( 20) /root/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unwinding-0.2.4/src/panicking.rs:42
+( 21) /root/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unwinding-0.2.4/src/panic.rs:87
+( 22) /root/asterinas/kernel/src/thread/oops.rs:54
+( 23) /root/asterinas/kernel/src/thread/task.rs:95
+( 24) /root/.rustup/toolchains/nightly-2024-10-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250
+( 25) /root/.rustup/toolchains/nightly-2024-10-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2454
+( 26) /root/asterinas/ostd/src/task/mod.rs:178
+make: *** [Makefile:210: run] Error 1
+```
+
 # syscall-execve-5313689-read_updated_state-panic
 Reachable assertion in `is_intersected` when running program whose `p_offset` and `p_filesz` is 0 and segment is aligned
 
@@ -7760,6 +7954,7 @@ Asterinas shall not panic when run the program.
 
 ### Logs
 ```
+~ # /root/syscall-execve-5313689-read_updated_state-panic
 [    44.911] ERROR: Uncaught panic:
         assertion failed: is_intersected(range1, range2)
         at /root/asterinas/kernel/src/vm/vmar/mod.rs:672
