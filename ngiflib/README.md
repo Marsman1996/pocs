@@ -466,3 +466,135 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   Right alloca redzone:    cb
 ==19652==ABORTING
 ```
+
+# driver-SDL_LoadGIF-4557142-segv
+SEGV in API `SDL_LoadGIF` caused by failure of `SDL_CreateRGBSurface`
+
+## Summary
+When calling `SDL_LoadGIF` with specific gif file, `SDL_CreateRGBSurface` in ngiflibSDL.c:77 fails and returns a NULL pointer, and triggers SEGV in ngiflibSDL.c:87:
+
+https://github.com/miniupnp/ngiflib/blob/4557142d84bc0dedbf7ba1c2956f13f7321c89f2/ngiflibSDL.c#L77-L87
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+ngiflib(master 4557142)
+
+## How to trigger
+1. Compile the program with AddressSanitizer `CC="clang -fsanitize=address,fuzzer-no-link -g " CFLAGS="-g -O0" make`
+2. Compile the fuzz driver which calls API `SDL_LoadGIF`:
+    ```C
+    // This fuzz driver is generated for library ngiflib, aiming to fuzz the
+    // following functions: CheckGif at ngiflib.c:408:5 in ngiflib.h LoadGif at
+    // ngiflib.c:647:5 in ngiflib.h GifIndexToTrueColor at ngiflib.c:901:5 in
+    // ngiflib.h SDL_LoadAnimatedGif at ngiflibSDL.c:103:31 in ngiflibSDL.h
+    // SDL_LoadGIF at ngiflibSDL.c:9:15 in ngiflibSDL.h
+    #include "ngiflib.h"
+    #include "ngiflibSDL.h"
+    #include <stddef.h>
+    #include <stdint.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+
+    int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+      if (Size == 0)
+        return 0;
+
+      // Test GifIndexToTrueColor
+      struct ngiflib_rgb palette[256];
+      for (int i = 0; i < 256; i++) {
+        palette[i].r = Data[i % Size];
+        palette[i].g = Data[(i + 1) % Size];
+        palette[i].b = Data[(i + 2) % Size];
+      }
+      u8 index = Data[0];
+      GifIndexToTrueColor(palette, index);
+
+      // Test CheckGif
+      u8 gif_header[6];
+      for (int i = 0; i < 6 && i < Size; i++) {
+        gif_header[i] = Data[i];
+      }
+      CheckGif(gif_header);
+
+      if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        printf("SDL_Init Error: %s\n", SDL_GetError());
+        return 1;
+      }
+
+      // Test SDL_LoadGIF
+      FILE *file = fopen("./dummy_file", "wb");
+      if (file) {
+        fwrite(Data, 1, Size, file);
+        fclose(file);
+        SDL_Surface *surface = SDL_LoadGIF("./dummy_file");
+        if (surface) {
+          SDL_FreeSurface(surface);
+        }
+      }
+
+      return 0;
+    }
+
+    int main(int argc, char **argv) {
+      if (argc < 2) {
+        printf("need file input");
+        return -1;
+      }
+      FILE *file = fopen(argv[1], "rb");
+      if (file == NULL) {
+        perror("fail to open file");
+        return 1;
+      }
+
+      fseek(file, 0, SEEK_END);
+      size_t Size = ftell(file);
+      rewind(file);
+
+      char *Data = (char *)malloc(Size + 1);
+      fread(Data, 1, Size, file);
+      LLVMFuzzerTestOneInput(Data, Size);
+      free(Data);
+    }
+    ```
+
+    ```bash
+    $ clang ./driver-SDL_LoadGIF-4557142-segv.c -fsanitize=address,undefined -I./ ./ngiflibSDL.o ./ngiflib.o -lSDL -I/usr/include/SDL  -o driver-SDL_LoadGIF-4557142-segv -g
+    ```
+
+3. Download the [poc file](https://github.com/Marsman1996/pocs/blob/master/ngiflib/poc-SDL_LoadGIF-4557142-segv?raw=true) and run the fuzz driver program
+
+## Reference
+https://github.com/miniupnp/ngiflib/issues/  
+
+## Credits
+Marsman1996(lqliuyuwei@outlook.com)
+
+## Details
+
+### ASAN report
+```
+$ ./driver-SDL_LoadGIF-4557142-segv poc-SDL_LoadGIF-4557142-segv
+GIF87a
+64160x144 8bits 256 couleurs  bg=0
+BLOCK SIGNATURE 0x2C ','
+img pos(0,0) size 160x144 palbits=8 imgbits=8 ncolors=256
+Code clear (256) (free=258) npix=23040
+assez de pixels, On se casse !
+ZERO TERMINATOR 0xFF
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==485850==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000008 (pc 0x5989b3da336f bp 0x7ffc79841830 sp 0x7ffc798415c0 T0)
+==485850==The signal is caused by a READ memory access.
+==485850==Hint: address points to the zero page.
+    #0 0x5989b3da336f in SDL_LoadGIF /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/ngiflibSDL.c:87:12
+    #1 0x5989b3da2714 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/./driver-SDL_LoadGIF-4557142-segv.c:45:28
+    #2 0x5989b3da2d05 in main /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/./driver-SDL_LoadGIF-4557142-segv.c:71:3
+    #3 0x7c9f1422a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #4 0x7c9f1422a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #5 0x5989b3cc8424 in _start (/home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/driver-SDL_LoadGIF-4557142-segv+0x2f424) (BuildId: 000a0124e10c7081ddbdb5e6357a5882555cea1e)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/ngiflibSDL.c:87:12 in SDL_LoadGIF
+==485850==ABORTING
+```

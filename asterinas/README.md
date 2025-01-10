@@ -4746,7 +4746,29 @@ There is a integer overflow in `RobustListHead::futex_addr()` at kernel/src/proc
 https://github.com/asterinas/asterinas/blob/f01772ca853e76d3076a561da3281034e3a46196/kernel/src/process/posix_thread/robust_list.rs#L53
 
 ### To Reproduce
-I'm tring to construct a minimal PoC.
+Compile and run the PoC program:
+```C
+#define _GNU_SOURCE
+#include <linux/futex.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+int main() {
+  struct robust_list_head head;
+  head.list.next = (struct robust_list *)(uintptr_t)(0x7fffffffffffffff);
+  head.futex_offset = 16;
+  head.list_op_pending = NULL;
+
+  syscall(SYS_set_robust_list, &head, sizeof(head));
+  perror("SYS_set_robust_list");
+
+  syscall(SYS_exit_group, 0);
+  perror("SYS_exit_group");
+}
+```
 
 ### Expected behavior
 
@@ -4889,7 +4911,52 @@ This is because of the `EFAULT` in `write_val` at process/signal/mod.rs:166:
 https://github.com/asterinas/asterinas/blob/25a918d132277eff7ea202cacc4bfa284de2dec5/kernel/src/process/signal/mod.rs#L166
 
 ### To Reproduce
-I'm tring to construct a minimal PoC.
+Compile and run the PoC program:
+```C
+#define _GNU_SOURCE
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <ucontext.h>
+#include <unistd.h>
+
+#define ALT_STACK_ADDR ((void *)0xdeadb000)
+#define ALT_STACK_SIZE (0x1000)
+
+void signal_handler(int signo, siginfo_t *info, void *context) { exit(0); }
+
+int main() {
+  stack_t ss;
+  ss.ss_sp = ALT_STACK_ADDR;
+  ss.ss_size = ALT_STACK_SIZE;
+  ss.ss_flags = 0;
+
+  if (mmap(ALT_STACK_ADDR, ALT_STACK_SIZE, PROT_NONE,
+           MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == MAP_FAILED) {
+    perror("mmap failed");
+    return 1;
+  }
+
+  sigaltstack(&ss, NULL);
+  perror("sigaltstack");
+
+  // Set up the signal handler with SA_ONSTACK.
+  struct sigaction sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_sigaction = signal_handler;
+  sa.sa_flags = SA_ONSTACK | SA_SIGINFO;
+  sigemptyset(&sa.sa_mask);
+
+  sigaction(SIGSEGV, &sa, NULL);
+  perror("sigaction");
+
+  raise(SIGSEGV);
+
+  return 0;
+}
+```
 
 ### Expected behavior
 Asterinas shall handle this error and not panic.
@@ -5812,7 +5879,45 @@ There is a integer overflow in `use_alternate_signal_stack()` at kernel/src/proc
 https://github.com/asterinas/asterinas/blob/c4cb0f1aefad470af18ee878f7959acedaa83768/kernel/src/process/signal/mod.rs#L257
 
 ### To Reproduce
-I'm trying to construct a minimal PoC.
+Compile and run the PoC program
+```C
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+void signal_handler(int signo) {
+  printf("Signal handler called for signal: %d\n", signo);
+  _exit(0);
+}
+
+int main() {
+  stack_t ss;
+  memset(&ss, 0, sizeof(ss));
+
+  ss.ss_sp = (void *)0x6d6d6d6d6d6d6d6d;
+  ss.ss_size = 0xffff800000000002;
+  ss.ss_flags = 0;
+
+  if (sigaltstack(&ss, NULL) != 0) {
+    perror("sigaltstack");
+    return 1;
+  }
+
+  struct sigaction sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_handler = signal_handler;
+  sa.sa_flags = SA_ONSTACK;
+  sigemptyset(&sa.sa_mask);
+
+  sigaction(SIGSEGV, &sa, NULL);
+  perror("sigaction");
+
+  raise(SIGSEGV);
+  return 1;
+}
+```
 
 ### Expected behavior
 
@@ -8373,3 +8478,229 @@ Printing stack trace:
 ( 25) /root/.rustup/toolchains/nightly-2024-11-29-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:1972
 ( 26) /root/asterinas/ostd/src/task/mod.rs:200
 ```
+
+# syscall-rmdir-5aa73d3-lookup_child-unwrap
+Reachable unwrap panic in `lookup_child` for `/proc/x/task`
+
+### Reference
+https://github.com/asterinas/asterinas/issues/  
+
+Fixed by https://github.com/asterinas/asterinas/pull/
+
+### Describe the bug
+There is a reachable unwrap panic in `lookup_child()` at kernel/src/fs/procfs/pid/task.rs:67 when user calls path related system call with args in `/proc/x/task`.
+
+
+https://github.com/asterinas/asterinas/blob/5aa73d3bcff8a549176d4366c64ee8bc56de9e6d/kernel/src/fs/procfs/pid/task.rs#L64-L68
+
+### To Reproduce
+1. Compile the program and run:
+```C
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main() {
+  chroot("/proc/1/task/");
+  perror("chroot");
+  rmdir("/proc/1/task/2/fd");
+  perror("rmdir");
+
+  return 0;
+}
+```
+
+### Expected behavior
+Asterinas shall not panic when run the program.
+
+### Environment
+- Official docker asterinas/asterinas:0.10.0
+- Intel(R) Xeon(R) Gold 6230R CPU @ 2.10GHz
+- Asterinas version: main 5aa73d3
+
+### Logs
+```
+~ # /root/chroot.c 
+chroot: Success
+[   338.156] ERROR: Uncaught panic:
+        called `Result::unwrap()` on an `Err` value: ParseIntError { kind: InvalidDigit }
+        at /root/asterinas/kernel/src/fs/procfs/pid/task.rs:67
+        on CPU 0 by thread Some(Thread { task: (Weak), data: Any { .. }, status: AtomicThreadStatus(1), priority: AtomicPriority(120), cpu_affinity: AtomicCpuSet { bits: [1] }, sched_attr: SchedAttr { policy: UnsafeCell { .. }, real_time: RealTimeAttr { prio: 99, time_slice: 31568680 }, fair: FairAttr { weight: 1024, vruntime: 0 } } })
+Printing stack trace:
+   1: fn 0xffffffff8882f650 - pc 0xffffffff8882f6ba / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7edd0;
+
+   2: fn 0xffffffff8804b7f0 - pc 0xffffffff8804c779 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7ee30;
+
+   3: fn 0xffffffff8804b7e0 - pc 0xffffffff8804b7ea / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7f5b0;
+
+   4: fn 0xffffffff8804a000 - pc 0xffffffff8804a00a / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7f5c0;
+
+   5: fn 0xffffffff889ced30 - pc 0xffffffff889ced74 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7f5d0;
+
+   6: fn 0xffffffff889f26a0 - pc 0xffffffff889f27e5 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7f610;
+
+   7: fn 0xffffffff8849f740 - pc 0xffffffff8849fabc / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7f710;
+
+   8: fn 0xffffffff88354830 - pc 0xffffffff88354ade / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7f8b0;
+
+   9: fn 0xffffffff8841d720 - pc 0xffffffff8841d811 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7faa0;
+
+  10: fn 0xffffffff88420df0 - pc 0xffffffff88421140 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7fc70;
+
+  11: fn 0xffffffff8813f640 - pc 0xffffffff8813fb63 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd7fe70;
+
+  12: fn 0xffffffff8813efd0 - pc 0xffffffff8813f064 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd802b0;
+
+  13: fn 0xffffffff88140930 - pc 0xffffffff881409e4 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd805b0;
+
+  14: fn 0xffffffff884d2ee0 - pc 0xffffffff884d357d / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd80740;
+
+  15: fn 0xffffffff884d2eb0 - pc 0xffffffff884d2ed5 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd80c00;
+
+  16: fn 0xffffffff882672c0 - pc 0xffffffff882823bd / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd80c20;
+
+  17: fn 0xffffffff88056c70 - pc 0xffffffff88056cfe / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99190;
+
+  18: fn 0xffffffff88235240 - pc 0xffffffff88235f5f / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99330;
+
+  19: fn 0xffffffff8805fdc0 - pc 0xffffffff8805fdc6 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99be0;
+
+  20: fn 0xffffffff880c43f0 - pc 0xffffffff880c4407 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99bf0;
+
+  21: fn 0xffffffff880c4780 - pc 0xffffffff880c4798 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99c10;
+
+  22: fn 0xffffffff880c42a0 - pc 0xffffffff880c42cf / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99c30;
+
+  23: fn 0xffffffff8814b5f0 - pc 0xffffffff8814b602 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99c80;
+
+  24: fn 0xffffffff8812ffe0 - pc 0xffffffff8812fff6 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99cb0;
+
+  25: fn 0xffffffff8832ebf0 - pc 0xffffffff8832ebfc / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99ef0;
+
+  26: fn 0xffffffff8805f9f0 - pc 0xffffffff8805f9fe / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99f20;
+
+  27: fn 0xffffffff888a91b0 - pc 0xffffffff888a91d8 / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99f40;
+
+  28: fn 0xffffffff887d8180 - pc 0xffffffff887d827e / registers:
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd99f80;
+
+
+     rax                0x1; rdx                0x8; rcx                0x0; rbx                0x0;
+     rsi 0xffffffff889ab346; rdi 0xffffffff887cca57; rbp                0x0; rsp 0xffffdfffffd9a000;
+
+[OSDK] The kernel seems panicked. Parsing stack trace for source lines:
+(  1) /root/asterinas/ostd/src/panic.rs:107
+(  2) /root/asterinas/kernel/src/thread/oops.rs:124
+(  3) ??:?
+(  4) 8tt63loih1k5cw5sp44t7i6ed:?
+(  5) ??:?
+(  6) ??:?
+(  7) /root/.rustup/toolchains/nightly-2024-11-29-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs:1104
+(  8) /root/asterinas/kernel/src/fs/procfs/template/dir.rs:166
+(  9) /root/asterinas/kernel/src/fs/path/dentry.rs:169
+( 10) /root/asterinas/kernel/src/fs/path/dentry.rs:492
+( 11) /root/asterinas/kernel/src/fs/fs_resolver.rs:232
+( 12) /root/asterinas/kernel/src/fs/fs_resolver.rs:165
+( 13) /root/asterinas/kernel/src/fs/fs_resolver.rs:309
+( 14) /root/asterinas/kernel/src/syscall/rmdir.rs:31
+( 15) /root/asterinas/kernel/src/syscall/rmdir.rs:14
+( 16) /root/asterinas/kernel/src/syscall/mod.rs:159
+( 17) /root/asterinas/kernel/src/syscall/mod.rs:330
+( 18) /root/asterinas/kernel/src/thread/task.rs:73
+( 19) /root/.rustup/toolchains/nightly-2024-11-29-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250
+( 20) /root/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unwinding-0.2.4/src/panicking.rs:56
+( 21) 6gug56n4f66o4bx44lpl2e7xy:?
+( 22) /root/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unwinding-0.2.4/src/panicking.rs:42
+( 23) /root/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unwinding-0.2.4/src/panic.rs:87
+( 24) /root/asterinas/kernel/src/thread/oops.rs:54
+( 25) /root/asterinas/kernel/src/thread/task.rs:99
+( 26) /root/.rustup/toolchains/nightly-2024-11-29-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250
+( 27) /root/.rustup/toolchains/nightly-2024-11-29-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:1972
+( 28) /root/asterinas/ostd/src/task/mod.rs:200
+make: *** [Makefile:200: run] Error 1
+```
+
+# 
