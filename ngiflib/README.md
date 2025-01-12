@@ -598,3 +598,76 @@ AddressSanitizer can not provide additional info.
 SUMMARY: AddressSanitizer: SEGV /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/ngiflibSDL.c:87:12 in SDL_LoadGIF
 ==485850==ABORTING
 ```
+
+# poc-SDL_LoadAnimatedGif-4557142-segv
+SEGV in `SDL_LoadAnimatedGif` at ngiflibSDL.c:204
+
+## Summary
+When program SDLaffgif reads specific gif file, `gif->palette` is NULL, which triggers SEGV at ngiflibSDL.c:204:
+
+https://github.com/miniupnp/ngiflib/blob/4557142d84bc0dedbf7ba1c2956f13f7321c89f2/ngiflibSDL.c#L203-L205
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+ngiflib(master 4557142)
+
+## How to trigger
+1. Download the [poc file](https://github.com/Marsman1996/pocs/blob/master/ngiflib/poc-SDL_LoadAnimatedGif-4557142-segv?raw=true) and run the following cmd:
+   ```bash
+    $ ./SDLaffgif ./poc-SDL_LoadAnimatedGif-4557142-segv
+   ```
+
+## Reference
+https://github.com/miniupnp/ngiflib/issues/  
+
+## Credits
+Marsman1996(lqliuyuwei@outlook.com)
+
+## Details
+
+### ASan report
+```
+$ ./SDLaffgif poc-SDL_LoadAnimatedGif-4557142-segv 
+GIF89�
+0x0 8bits 256 couleurs  bg=0
+BLOCK SIGNATURE 0x2C ','
+*** WARNING *** Adjusting X position
+*** WARNING *** Adjusting Y position
+img pos(0,0) size 0x0 palbits=8 imgbits=7 ncolors=256
+assez de pixels, On se casse !
+ZERO TERMINATOR 0x09
+no palette in GIF
+BLOCK SIGNATURE 0x2C ','
+*** WARNING *** Adjusting X position
+*** WARNING *** Adjusting Y position
+Local palette
+interlaced img pos(0,0) size 0x0 palbits=2 imgbits=0 ncolors=4
+assez de pixels, On se casse !
+ZERO TERMINATOR 0xFF
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==771557==ERROR: AddressSanitizer: SEGV on unknown address 0x00000000000c (pc 0x5f1a9062ad22 bp 0x7ffc757e6590 sp 0x7ffc757e6160 T0)
+==771557==The signal is caused by a READ memory access.
+==771557==Hint: address points to the zero page.
+    #0 0x5f1a9062ad22 in SDL_LoadAnimatedGif /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/ngiflibSDL.c:204:61
+    #1 0x5f1a90628468 in main /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/SDLaffgif.c:107:14
+    #2 0x7515b6a2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #3 0x7515b6a2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #4 0x5f1a9054e4b4 in _start (/home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/SDLaffgif+0x2f4b4) (BuildId: 9e03ac347183b0b16159202ad6e8d1c1ed45cd9f)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV /home/yuwei/afgen/afgenllm/database/ngiflib/ngiflib/ngiflibSDL.c:204:61 in SDL_LoadAnimatedGif
+==771557==ABORTING
+```
+
+### GDB report
+```
+Thread 1 "SDLaffgif" received signal SIGSEGV, Segmentation fault.
+0x0000555555556fad in SDL_LoadAnimatedGif (file=file@entry=0x7fffffffdebf "./poc-SDL_LoadAnimatedGif-4557142-segv") at ngiflibSDL.c:204
+204                                     surface->format->palette->colors[i].r = gif->palette[i].r;
+(gdb) bt
+#0  0x0000555555556fad in SDL_LoadAnimatedGif (file=file@entry=0x7fffffffdebf "./poc-SDL_LoadAnimatedGif-4557142-segv") at ngiflibSDL.c:204
+#1  0x00005555555568e2 in main (argc=<optimized out>, argv=<optimized out>) at SDLaffgif.c:107
+(gdb) p gif->palette
+$3 = (struct ngiflib_rgb *) 0x0
+```
