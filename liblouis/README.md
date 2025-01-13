@@ -312,7 +312,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 
 # poc-API-3d95765-parseQuery-SEGV
 
-Segment fault in `parseQuery()`
+Segment fault in `parseQuery()` caused by free a non-malloc()ed string
 ## Summary
 When call API `lou_findTable` with specific file, there will be SEGV in `parseQuery()` at liblouis/metadata.c:586:5
 
@@ -402,7 +402,7 @@ liblouis (master, 3d95765)
     ```bash
     $ clang ./driver-API-3d95765-parseQuery-SEGV.c -o ./driver-API-3d95765-parseQuery-SEGV -fsanitize=address,undefined -I./bin_asan/include/liblouis ./bin_asan/lib/liblouis.a -lyaml -g
     ```
-3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-parseQuery-SEGV) and run the compiled driver: `$ ./driver-API-6223f21-lou_setDataPath-BO poc-API-6223f21-lou_setDataPath-BO`
+3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-parseQuery-SEGV) and run the compiled driver: `$ ./driver-API-3d95765-parseQuery-SEGV poc-API-3d95765-parseQuery-SEGV`
 
 ## ASAN report
 ```
@@ -425,4 +425,97 @@ AddressSanitizer:DEADLYSIGNAL
 AddressSanitizer can not provide additional info.
 SUMMARY: AddressSanitizer: SEGV (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-parseQuery-SEGV+0x467c6) (BuildId: 84429c59a4ee44f9c90d92673ea84dbbef3f595b) in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType)
 ==743108==ABORTING
+```
+
+# poc-API-3d95765-analyzeTable-SEGV
+Segment fault in `analyzeTable()` caused by free a non-malloc()ed string
+
+## Summary
+When call API `lou_indexTables` with specific file, there will be SEGV in `analyzeTable()` at liblouis/metadata.c:842:8
+
+https://github.com/liblouis/liblouis/blob/42af0893e7ac47761ac5ed33c04e43f541f67c46/liblouis/metadata.c#L827-L842
+
+In liblouis/metadata.c:827 there is `if (!v) v = "yes";` and in liblouis/metadata.c:842 liblouis `free(v)`
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 3d95765)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+2. Compile the fuzz driver, the fuzz driver code is:
+    ```C
+    // This fuzz driver is generated for library liblouis, aiming to fuzz the following functions:
+    // lou_indexTables at metadata.c:895:1 in liblouis.h
+    #include <stdint.h>
+    #include <stddef.h>
+    #include <string.h>
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include <liblouis.h>
+
+    int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+        if (Size < 1) return 0;
+
+        // Initialize variables
+        char *tableList = "./dummy_file";
+        FILE *fp = fopen("./dummy_file", "wb");
+        fwrite(Data, 1, Size, fp);
+        fclose(fp);
+
+        // Call lou_indexTables
+        const char *tablesArray[] = {tableList, NULL};
+        lou_indexTables(tablesArray);
+
+        return 0;
+    }
+
+    int main(int argc, char **argv) {
+        if (argc < 2) {
+        printf("need file input");
+        return -1;
+        }
+        FILE *file = fopen(argv[1], "rb");
+        if (file == NULL) {
+            perror("fail to open file");
+            return 1;
+        }
+
+        fseek(file, 0, SEEK_END);
+        size_t Size = ftell(file);
+        rewind(file);
+
+        char *Data = (char *)malloc(Size + 1);
+        fread(Data, 1, Size, file);
+        LLVMFuzzerTestOneInput(Data, Size);
+        free(Data);
+        fclose(file);
+    }
+    ```
+    The compile command is:
+    ```bash
+    $ clang ./driver-API-3d95765-analyzeTable-SEGV.c -o ./driver-API-3d95765-analyzeTable-SEGV -fsanitize=address,undefined -I./bin_asan/include/liblouis ./bin_asan/lib/liblouis.a -lyaml -g
+    ```
+3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-analyzeTable-SEGV) and run the compiled driver: `$ ./driver-API-3d95765-analyzeTable-SEGV ./poc-API-3d95765-analyzeTable-SEGV`
+
+## ASAN report
+```
+$ ./driver-API-3d95765-analyzeTable-SEGV ./poc-API-3d95765-analyzeTable-SEGV 
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==1903003==ERROR: AddressSanitizer: SEGV on unknown address 0x58857284be70 (pc 0x5885727087c6 bp 0x000000000000 sp 0x7ffde43493a0 T0)
+==1903003==The signal is caused by a WRITE memory access.
+    #0 0x5885727087c6 in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-analyzeTable-SEGV+0x467c6) (BuildId: 85e1831f4e1b08a8c13fe33c3144db8b4cad3c6c)
+    #1 0x5885727a0fdf in free (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-analyzeTable-SEGV+0xdefdf) (BuildId: 85e1831f4e1b08a8c13fe33c3144db8b4cad3c6c)
+    #2 0x5885727e1b59 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:842:8
+    #3 0x5885727dfd79 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:901:20
+    #4 0x5885727df95c in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/latest/./driver-API-3d95765-analyzeTable-SEGV.c:21:5
+    #5 0x5885727dfbd5 in main /home/yuwei/afgen/afgenllm/database/liblouis/latest/./driver-API-3d95765-analyzeTable-SEGV.c:43:5
+    #6 0x781fade2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #7 0x781fade2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #8 0x5885727063c4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-analyzeTable-SEGV+0x443c4) (BuildId: 85e1831f4e1b08a8c13fe33c3144db8b4cad3c6c)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-analyzeTable-SEGV+0x467c6) (BuildId: 85e1831f4e1b08a8c13fe33c3144db8b4cad3c6c) in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType)
+==1903003==ABORTING
 ```
