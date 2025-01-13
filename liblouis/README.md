@@ -309,3 +309,120 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   Shadow gap:              cc
 ==29969==ABORTING
 ```
+
+# poc-API-3d95765-parseQuery-SEGV
+
+Segment fault in `parseQuery()`
+## Summary
+When call API `lou_findTable` with specific file, there will be SEGV in `parseQuery()` at liblouis/metadata.c:586:5
+
+https://github.com/liblouis/liblouis/blob/42af0893e7ac47761ac5ed33c04e43f541f67c46/liblouis/metadata.c#L575-L586
+
+In liblouis/metadata.c:575 there is `if (!v) v = "yes";` and in liblouis/metadata.c:586 liblouis `free(v)`
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 3d95765)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+2. Compile the fuzz driver, the fuzz driver code is:
+    ```C
+    // This fuzz driver is generated for library liblouis, aiming to fuzz the following functions:
+    // lou_setDataPath at compileTranslationTable.c:59:1 in liblouis.h
+    // lou_indexTables at metadata.c:895:1 in liblouis.h
+    // lou_findTable at metadata.c:1002:1 in liblouis.h
+    // lou_getTableInfo at metadata.c:1073:1 in liblouis.h
+    #include <stdint.h>
+    #include <stddef.h>
+    #include <string.h>
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include <liblouis.h>
+    #include <stdint.h>
+    #include <stdlib.h>
+    #include <string.h>
+
+    int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+        if (Size < 1) return 0;
+
+        // Set up a dummy data path
+        lou_setDataPath("./dummy_file");
+
+        // Call lou_indexTables before lou_findTable
+        char *tables[] = {"bin_asan/share/liblouis/tables/afr-za-g1.ctb", NULL};
+        lou_indexTables(tables);
+
+        // Use the input data to create a query string
+        char *query = (char *)malloc(Size + 1);
+        if (!query) return 0;
+        memcpy(query, Data, Size);
+        query[Size] = '\0';
+
+        // Find a table based on the query
+        char *table = lou_findTable(query);
+        if (table) {
+            // Get table info using a dummy key
+            char *info = lou_getTableInfo(table, "dummy_key");
+            if (info) {
+                free(info); // Use free instead of lou_free for strings
+            }
+            free(table); // Use free instead of lou_free for strings
+        }
+
+        // Clean up
+        lou_free(); // Call lou_free without arguments
+        free(query);
+        return 0;
+    }
+
+    int main(int argc, char **argv) {
+        if (argc < 2) {
+        printf("need file input");
+        return -1;
+        }
+        FILE *file = fopen(argv[1], "rb");
+        if (file == NULL) {
+            perror("fail to open file");
+            return 1;
+        }
+
+        fseek(file, 0, SEEK_END);
+        size_t Size = ftell(file);
+        rewind(file);
+
+        char *Data = (char *)malloc(Size + 1);
+        fread(Data, 1, Size, file);
+        LLVMFuzzerTestOneInput(Data, Size);
+        free(Data);
+        fclose(file);
+    }
+    ```
+    The compile command is:
+    ```bash
+    $ clang ./driver-API-3d95765-parseQuery-SEGV.c -o ./driver-API-3d95765-parseQuery-SEGV -fsanitize=address,undefined -I./bin_asan/include/liblouis ./bin_asan/lib/liblouis.a -lyaml -g
+    ```
+3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-parseQuery-SEGV) and run the compiled driver: `$ ./driver-API-6223f21-lou_setDataPath-BO poc-API-6223f21-lou_setDataPath-BO`
+
+## ASAN report
+```
+$ ./driver-API-3d95765-parseQuery-SEGV poc-API-3d95765-parseQuery-SEGV 
+warning: lou_setDataPath is deprecated.
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==743108==ERROR: AddressSanitizer: SEGV on unknown address 0x5fdd76ffe450 (pc 0x5fdd76eb57c6 bp 0x000000000000 sp 0x7ffd758717c0 T0)
+==743108==The signal is caused by a WRITE memory access.
+    #0 0x5fdd76eb57c6 in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-parseQuery-SEGV+0x467c6) (BuildId: 84429c59a4ee44f9c90d92673ea84dbbef3f595b)
+    #1 0x5fdd76f4dfdf in free (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-parseQuery-SEGV+0xdefdf) (BuildId: 84429c59a4ee44f9c90d92673ea84dbbef3f595b)
+    #2 0x5fdd76fce1b2 in parseQuery /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:586:5
+    #3 0x5fdd76fcd6fb in lou_findTable /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:1004:24
+    #4 0x5fdd76f8ca45 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/latest/./driver-API-3d95765-parseQuery-SEGV.c:33:19
+    #5 0x5fdd76f8cd35 in main /home/yuwei/afgen/afgenllm/database/liblouis/latest/./driver-API-3d95765-parseQuery-SEGV.c:66:5
+    #6 0x7febc442a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #7 0x7febc442a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #8 0x5fdd76eb33c4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-parseQuery-SEGV+0x443c4) (BuildId: 84429c59a4ee44f9c90d92673ea84dbbef3f595b)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-parseQuery-SEGV+0x467c6) (BuildId: 84429c59a4ee44f9c90d92673ea84dbbef3f595b) in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType)
+==743108==ABORTING
+```
