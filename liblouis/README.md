@@ -519,3 +519,297 @@ AddressSanitizer can not provide additional info.
 SUMMARY: AddressSanitizer: SEGV (/home/yuwei/afgen/afgenllm/database/liblouis/latest/driver-API-3d95765-analyzeTable-SEGV+0x467c6) (BuildId: 85e1831f4e1b08a8c13fe33c3144db8b4cad3c6c) in __asan::Allocator::Deallocate(void*, unsigned long, unsigned long, __sanitizer::BufferedStackTrace*, __asan::AllocType)
 ==1903003==ABORTING
 ```
+
+# poc-API-3d95765-lou_indexTables-leak
+Memory leaks in API `lou_indexTables()`
+
+## Summary
+When call API `lou_indexTables` with specific file, there will be memory leaks due to not released `tableIndex`.
+
+https://github.com/liblouis/liblouis/blob/42af0893e7ac47761ac5ed33c04e43f541f67c46/liblouis/metadata.c#L904
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 3d95765)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+2. Compile the fuzz driver, the fuzz driver code could be downloaded [here](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/driver-API-3d95765-lou_indexTables-leak.c).
+    The compile command is:
+    ```bash
+    $ clang ./driver-API-3d95765-lou_indexTables-leak.c -o ./driver-API-3d95765-lou_indexTables-leak -fsanitize=fuzzer,address,undefined -I./liblouis ./liblouis/.libs/liblouis.a -lyaml -g
+    ```
+3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-lou_indexTables-leak) and run the compiled driver: `$ ./driver-API-3d95765-lou_indexTables-leak ./poc-API-3d95765-lou_indexTables-leak`
+
+## ASan Report
+```
+$ ./driver-API-3d95765-lou_indexTables-leak ./poc-API-3d95765-lou_indexTables-leak
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2315793136
+INFO: Loaded 1 modules   (2581 inline 8-bit counters): 2581 [0x56363088cee8, 0x56363088d8fd), 
+INFO: Loaded 1 PC tables (2581 PCs): 2581 [0x56363088d900,0x563630897a50), 
+./driver-API-3d95765-lou_indexTables-leak: Running 1 inputs 1 time(s) each.
+Running: ./poc-API-3d95765-lou_indexTables-leak
+warning: lou_setDataPath is deprecated.
+warning: lou_setDataPath is deprecated.
+
+=================================================================
+==2758030==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 32 byte(s) in 1 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630824bc0 in list_conj /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:89:14
+    #2 0x5636308295d1 in list_sort /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:136:13
+    #3 0x563630824395 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:878:9
+    #4 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #5 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #6 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #10 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #11 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #12 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Direct leak of 23 byte(s) in 1 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x56363082215f in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:900:20
+    #2 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #3 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #4 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #5 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #8 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #9 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 160 byte(s) in 5 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630824bc0 in list_conj /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:89:14
+    #2 0x5636308295d1 in list_sort /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:136:13
+    #3 0x563630824395 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:878:9
+    #4 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #5 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #6 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #10 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #11 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #12 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 160 byte(s) in 4 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630823d4f in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:826:11
+    #2 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #3 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #4 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #5 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 40 byte(s) in 1 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630823b3c in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:808:12
+    #2 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #3 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #4 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #5 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 40 byte(s) in 1 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630824047 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:851:20
+    #2 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #3 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #4 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #5 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 40 byte(s) in 1 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x5636308241f1 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:866:38
+    #2 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #3 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #4 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #5 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 32 byte(s) in 1 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x5636308290ae in list_dup /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:120:12
+    #2 0x56363082408b in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:853:27
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 32 byte(s) in 1 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x5636308245b9 in list_conj /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:61:10
+    #2 0x563630828c38 in parseLanguageTag /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:284:11
+    #3 0x563630823838 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:770:21
+    #4 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #5 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #6 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #10 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #11 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #12 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 32 byte(s) in 1 object(s) allocated from:
+    #0 0x5636307a5de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x118de3) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x5636308245b9 in list_conj /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:61:10
+    #2 0x5636308295d1 in list_sort /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:136:13
+    #3 0x563630824395 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:878:9
+    #4 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #5 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #6 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #10 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #11 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #12 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 30 byte(s) in 4 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630828ec3 in feat_new /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:202:10
+    #2 0x563630823d7e in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:828:13
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 21 byte(s) in 4 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630828f2b in feat_new /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:203:16
+    #2 0x563630823d7e in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:828:13
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 14 byte(s) in 1 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630828ec3 in feat_new /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:202:10
+    #2 0x56363082421d in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:868:8
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 9 byte(s) in 1 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630828ec3 in feat_new /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:202:10
+    #2 0x563630823b68 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:810:14
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 7 byte(s) in 1 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630828ec3 in feat_new /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:202:10
+    #2 0x5636308240a9 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:853:8
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 5 byte(s) in 1 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630828f2b in feat_new /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:203:16
+    #2 0x56363082421d in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:868:8
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 3 byte(s) in 1 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630829165 in list_dup /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:121:24
+    #2 0x56363082408b in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:853:27
+    #3 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #4 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #5 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #6 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #10 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #11 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+Indirect leak of 3 byte(s) in 1 object(s) allocated from:
+    #0 0x56363078daee in strdup (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x100aee) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #1 0x563630824601 in list_conj /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:62:22
+    #2 0x563630828c38 in parseLanguageTag /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:284:11
+    #3 0x563630823838 in analyzeTable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:770:21
+    #4 0x5636308220f9 in lou_indexTables /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/metadata.c:898:20
+    #5 0x5636307e44ef in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./driver-API-3d95765-lou_indexTables-leak.c:20:2
+    #6 0x5636306f1cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x64cb4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #7 0x5636306dade6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x4dde6) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #8 0x5636306e089a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x5389a) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #9 0x56363070b056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x7e056) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+    #10 0x7f776ea2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #11 0x7f776ea2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #12 0x5636306d59b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/driver-API-3d95765-lou_indexTables-leak+0x489b4) (BuildId: 419145a04361a7140ab08798554acc4b893ede67)
+
+SUMMARY: AddressSanitizer: 683 byte(s) leaked in 31 allocation(s).
+
+INFO: a leak has been found in the initial corpus.
+
+INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.
+```
