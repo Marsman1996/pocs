@@ -121,3 +121,106 @@ _TIFFVGetField (tif=<optimized out>, tag=<optimized out>, ap=0x7fffffffdaa0) at 
 #2  0x0000000000402f76 in tiffcp (out=0x6722e0, in=0x671010) at ../../code/tools/tiffsplit.c:260
 #3  main (argc=<optimized out>, argv=<optimized out>) at ../../code/tools/tiffsplit.c:160
 ```
+
+# poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion
+
+## Summary
+Reachable assertion when tiffcmp processes a craft file.
+
+## Version
+
+LIBTIFF, Version 4.7.0, master fcd4c86c
+
+## Steps to reproduce
+Download the poc file from [here](https://github.com/Marsman1996/pocs/blob/master/libtiff/poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion?raw=true) and run cmd 
+`$ tiffcmp $POC $POC`
+
+## Platform
+Ubuntu 24.04.1 LTS, x86_64, Clang 18.1.3
+
+## GDB report
+```
+$ gdb --args ./tools/tiffcmp ./poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion ./poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion
+
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from ./tools/tiffcmp...
+(gdb) r
+Starting program: /home/yuwei/afgen/afgenllm/database/libtiff/libtiff/tools/tiffcmp ./poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion ./poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+TIFFReadDirectoryCheckOrder: Warning, Invalid TIFF directory; tags are not sorted in ascending order.
+ReadDirEntryArray: Warning, Requested memory size for tag 0 (0x0) 301990019 is greater than filesize 39865. Memory not allocated, tag not read.
+TIFFFetchNormalTag: Warning, Out of memory reading of "Tag 0"; tag ignored.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 77 (Tag 77) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 65535 (Tag 65535) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFReadDirectory: Warning, Invalid data type for tag StripOffsets.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 26223 (Tag 26223) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 20079 (Tag 20079) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 38756 (Tag 38756) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 22377 (Tag 22377) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 49631 (Tag 49631) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 57311 (Tag 57311) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 33924 (Tag 33924) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 25959 (Tag 25959) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+_TIFFVSetField: Warning, ./poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion: Null count for "Tag 26880" (type 16, writecount -3, passcount 1).
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 127 (Tag 127) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 30057 (Tag 30057) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Warning, Sanity check on size of "Tag 2304" value failed; tag ignored.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 28013 (Tag 28013) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 1252 (Tag 1252) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 26985 (Tag 26985) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 15650 (Tag 15650) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 32512 (Tag 32512) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 29556 (Tag 29556) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 12543 (Tag 12543) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFReadDirectory: Warning, Bogus "StripByteCounts" field, ignoring and calculating from imagelength.
+TIFFReadDirectoryCheckOrder: Warning, Invalid TIFF directory; tags are not sorted in ascending order.
+ReadDirEntryArray: Warning, Requested memory size for tag 0 (0x0) 301990019 is greater than filesize 39865. Memory not allocated, tag not read.
+TIFFFetchNormalTag: Warning, Out of memory reading of "Tag 0"; tag ignored.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 77 (Tag 77) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 65535 (Tag 65535) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFReadDirectory: Warning, Invalid data type for tag StripOffsets.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 26223 (Tag 26223) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 20079 (Tag 20079) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 38756 (Tag 38756) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 22377 (Tag 22377) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 49631 (Tag 49631) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 57311 (Tag 57311) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 33924 (Tag 33924) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 25959 (Tag 25959) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+_TIFFVSetField: Warning, ./poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion: Null count for "Tag 26880" (type 16, writecount -3, passcount 1).
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 127 (Tag 127) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 30057 (Tag 30057) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Warning, Sanity check on size of "Tag 2304" value failed; tag ignored.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 28013 (Tag 28013) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 1252 (Tag 1252) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 26985 (Tag 26985) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 15650 (Tag 15650) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 32512 (Tag 32512) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 29556 (Tag 29556) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFFetchNormalTag: Defined set_get_field_type of custom tag 12543 (Tag 12543) is TIFF_SETGET_UNDEFINED and thus tag is not read from file.
+TIFFReadDirectory: Warning, Bogus "StripByteCounts" field, ignoring and calculating from imagelength.
+tiffcmp: tif_read.c:1651: _TIFFSwab16BitData: Assertion `(cc & 1) == 0' failed.
+
+Program received signal SIGABRT, Aborted.
+__pthread_kill_implementation (no_tid=0, signo=6, threadid=<optimized out>) at ./nptl/pthread_kill.c:44
+warning: 44     ./nptl/pthread_kill.c: No such file or directory
+(gdb) bt
+#0  __pthread_kill_implementation (no_tid=0, signo=6, threadid=<optimized out>) at ./nptl/pthread_kill.c:44
+#1  __pthread_kill_internal (signo=6, threadid=<optimized out>) at ./nptl/pthread_kill.c:78
+#2  __GI___pthread_kill (threadid=<optimized out>, signo=signo@entry=6) at ./nptl/pthread_kill.c:89
+#3  0x00007ffff7a4527e in __GI_raise (sig=sig@entry=6) at ../sysdeps/posix/raise.c:26
+#4  0x00007ffff7a288ff in __GI_abort () at ./stdlib/abort.c:79
+#5  0x00007ffff7a2881b in __assert_fail_base (fmt=0x7ffff7bd01e8 "%s%s%s:%u: %s%sAssertion `%s' failed.\n%n", 
+    assertion=assertion@entry=0x55555559d59f "(cc & 1) == 0", file=file@entry=0x55555559d4e3 "tif_read.c", line=line@entry=1651, 
+    function=function@entry=0x5555555a66c0 <__PRETTY_FUNCTION__.3> "_TIFFSwab16BitData") at ./assert/assert.c:96
+#6  0x00007ffff7a3b517 in __assert_fail (assertion=assertion@entry=0x55555559d59f "(cc & 1) == 0", file=file@entry=0x55555559d4e3 "tif_read.c", 
+    line=line@entry=1651, function=function@entry=0x5555555a66c0 <__PRETTY_FUNCTION__.3> "_TIFFSwab16BitData") at ./assert/assert.c:105
+#7  0x00005555555716be in _TIFFSwab16BitData (tif=<optimized out>, buf=<optimized out>, cc=<optimized out>) at tif_read.c:1651
+#8  0x000055555557088d in TIFFReadScanline (tif=tif@entry=0x5555555d02a0, buf=buf@entry=0x5555555d3a90, row=row@entry=0, sample=sample@entry=0)
+    at tif_read.c:465
+#9  0x000055555555a5e4 in tiffcmp (tif2=0x5555555d2720, tif1=0x5555555d02a0) at tiffcmp.c:246
+#10 main (argc=<optimized out>, argv=<optimized out>) at tiffcmp.c:110
+```
