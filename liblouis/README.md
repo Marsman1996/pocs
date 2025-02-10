@@ -815,10 +815,10 @@ INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.
 ```
 
 # poc-API-3d95765-analyzeTable-leak
-Memory leak in `analyzeTable()` and `parseQuery()` caused by `goto`
+Memory leak in `analyzeTable()` caused by `goto`
 
 ## Summary
-In `analyzeTable()` and `parseQuery()`, if liblouis fall into `compile_error`, the memory buffer `k` is not free-ed.
+In `analyzeTable()`, if liblouis fall into `compile_error`, the memory buffer `k` is not free-ed.
 
 https://github.com/liblouis/liblouis/blob/42af0893e7ac47761ac5ed33c04e43f541f67c46/liblouis/metadata.c#L721
 
@@ -833,7 +833,7 @@ liblouis (master, 3d95765)
     ```bash
     $ clang ./driver-API-3d95765-analyzeTable-leak.c -o ./driver-API-3d95765-analyzeTable-leak -fsanitize=fuzzer,address,undefined -I./liblouis ./liblouis/.libs/liblouis.a -lyaml -g
     ```
-3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-analyzeTable-leak) and run the compiled driver: `$ ./driver-API-3d95765-lou_indexTables-leak ./poc-API-3d95765-lou_indexTables-leak`
+3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-analyzeTable-leak) and run the compiled driver: `$ ./driver-API-3d95765-analyzeTable-leak ./poc-API-3d95765-analyzeTable-leak`
 
 ## ASan Report
 ```
@@ -867,6 +867,83 @@ Direct leak of 99 byte(s) in 1 object(s) allocated from:
     #11 0x55e5ebc3b9b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-analyzeTable-leak+0x489b4) (BuildId: 98215438c2c3a7706c26e5bfffbb37dc265b40c6)
 
 SUMMARY: AddressSanitizer: 99 byte(s) leaked in 1 allocation(s).
+
+INFO: a leak has been found in the initial corpus.
+
+INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.
+```
+
+# poc-API-3d95765-parseQuery-leak
+Memory leak in `parseQuery()` caused by `goto`
+
+## Summary
+In `parseQuery()`, if liblouis fall into `compile_error`, the memory buffer `k` is not free-ed.
+
+https://github.com/liblouis/liblouis/blob/42af0893e7ac47761ac5ed33c04e43f541f67c46/liblouis/metadata.c#L721
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 3d95765)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+2. Compile the fuzz driver, the fuzz driver code could be downloaded [here](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/driver-API-3d95765-parseQuery-leak.c).
+    The compile command is:
+    ```bash
+    $ clang ./driver-API-3d95765-parseQuery-leak.c -o ./driver-API-3d95765-parseQuery-leak -fsanitize=fuzzer,address,undefined -I./liblouis ./liblouis/.libs/liblouis.a -lyaml -g
+    ```
+3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-parseQuery-leak) and run the compiled driver: `$ ./driver-API-3d95765-parseQuery-leak ./poc-API-3d95765-parseQuery-leak`
+
+## ASAN Report
+```
+$ ./driver-API-3d95765-parseQuery-leak poc-API-3d95765-parseQuery-leak 
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 576973481
+INFO: Loaded 1 modules   (2597 inline 8-bit counters): 2597 [0x55d0e4e2ef68, 0x55d0e4e2f98d), 
+INFO: Loaded 1 PC tables (2597 PCs): 2597 [0x55d0e4e2f990,0x55d0e4e39be0), 
+./driver-API-3d95765-parseQuery-leak: Running 1 inputs 1 time(s) each.
+Running: poc-API-3d95765-parseQuery-leak
+warning: lou_setDataPath is deprecated.
+Tables have not been indexed yet. Indexing LOUIS_TABLEPATH.
+./dummy_file/liblouis/tables is not a directory
+Not a valid language tag: ppppppppppppp
+No table could be found for query 'r:ppppppppppppp
+u:U'
+warning: lou_setDataPath is deprecated.
+Not a valid language tag: ppppppppppppp
+No table could be found for query 'r:ppppppppppppp
+u:U'
+
+=================================================================
+==1671673==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 14 byte(s) in 1 object(s) allocated from:
+    #0 0x55d0e4d47de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x118de3) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #1 0x55d0e4dc75d5 in parseQuery /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:531:10
+    #2 0x55d0e4dc707b in lou_findTable /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:1004:24
+    #3 0x55d0e4d8665a in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak.c:25:19
+    #4 0x55d0e4c93cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x64cb4) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #5 0x55d0e4c7cde6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x4dde6) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #6 0x55d0e4c8289a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x5389a) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #7 0x55d0e4cad056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x7e056) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #8 0x7f13a662a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x7f13a662a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x55d0e4c779b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x489b4) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+
+Direct leak of 2 byte(s) in 1 object(s) allocated from:
+    #0 0x55d0e4d47de3 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x118de3) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #1 0x55d0e4dc764d in parseQuery /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:535:15
+    #2 0x55d0e4dc707b in lou_findTable /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/metadata.c:1004:24
+    #3 0x55d0e4d8665a in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak.c:25:19
+    #4 0x55d0e4c93cb4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x64cb4) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #5 0x55d0e4c7cde6 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x4dde6) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #6 0x55d0e4c8289a in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x5389a) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #7 0x55d0e4cad056 in main (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x7e056) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+    #8 0x7f13a662a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x7f13a662a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x55d0e4c779b4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/driver-API-3d95765-parseQuery-leak+0x489b4) (BuildId: 89691af59c97c93b3d5647ac844190735a17cafd)
+
+SUMMARY: AddressSanitizer: 16 byte(s) leaked in 2 allocation(s).
 
 INFO: a leak has been found in the initial corpus.
 

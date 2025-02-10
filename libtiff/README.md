@@ -124,6 +124,8 @@ _TIFFVGetField (tif=<optimized out>, tag=<optimized out>, ap=0x7fffffffdaa0) at 
 
 # poc-tiffcmp-fcd4c86c-_TIFFSwab16BitData-assertion
 
+tiffcmp: reachable assertion in _TIFFSwab16BitData()
+
 ## Summary
 Reachable assertion when tiffcmp processes a craft file.
 
