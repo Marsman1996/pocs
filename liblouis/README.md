@@ -879,7 +879,7 @@ Memory leak in `parseQuery()` caused by `goto`
 ## Summary
 In `parseQuery()`, if liblouis fall into `compile_error`, the memory buffer `k` is not free-ed.
 
-https://github.com/liblouis/liblouis/blob/42af0893e7ac47761ac5ed33c04e43f541f67c46/liblouis/metadata.c#L721
+https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/metadata.c#L531
 
 ## Test Environment
 Ubuntu 24.04.1, 64bit  
@@ -948,4 +948,103 @@ SUMMARY: AddressSanitizer: 16 byte(s) leaked in 2 allocation(s).
 INFO: a leak has been found in the initial corpus.
 
 INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.
+```
+
+# poc-API-3d95765-back_passDoAction-HBO
+Heap buffer overflow in `back_passDoAction()`
+
+## Summary
+There is a heap buffer overflow problem when run `fuzz_backtranslate`
+
+https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_backTranslateString.c#L1542
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 3d95765)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+2. Compile the fuzz driver, the fuzz driver code is in `tests/fuzzing/fuzz_backtranslate.c`.
+    The compile command is:
+    ```bash
+    $ clang ./fuzz_backtranslate.c -o ./fuzz_backtranslate -fsanitize=fuzzer,address,undefined -g -I ../build_asan/liblouis -I ../code/liblouis ../bin_asan/lib/liblouis.a -lyaml
+    ```
+3. Download the [poc file](https://raw.githubusercontent.com/Marsman1996/pocs/master/liblouis/poc-API-3d95765-back_passDoAction-HBO) and run the compiled driver: `$ ./fuzz_backtranslate ./poc-API-3d95765-back_passDoAction-HBO`
+
+## ASAN Report
+```
+$ ./fuzz_backtranslate ./poc-API-3d95765-back_passDoAction-HBO 
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 3645357754
+INFO: Loaded 1 modules   (2923 inline 8-bit counters): 2923 [0x5607fcb39748, 0x5607fcb3a2b3), 
+INFO: Loaded 1 PC tables (2923 PCs): 2923 [0x5607fcb3a2b8,0x5607fcb45968), 
+./fuzz_backtranslate: Running 1 inputs 1 time(s) each.
+Running: ./poc-API-3d95765-back_passDoAction-HBO
+=================================================================
+==1093132==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x5210000050fc at pc 0x5607fcaca58e bp 0x7ffedf830350 sp 0x7ffedf830348
+WRITE of size 4 at 0x5210000050fc thread T0
+    #0 0x5607fcaca58d in back_passDoAction build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:1542:17
+    #1 0x5607fcac5525 in makeCorrections build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:1066:9
+    #2 0x5607fcabf247 in _lou_backTranslate build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:261:9
+    #3 0x5607fcabdb44 in lou_backTranslate build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:153:9
+    #4 0x5607fcabd9b6 in lou_backTranslateString build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:145:9
+    #5 0x5607fca7fcd3 in LLVMFuzzerTestOneInput ossfuzz/./fuzz_backtranslate.c:110:3
+    #6 0x5607fc98ccd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (ossfuzz/fuzz_backtranslate+0x65cd4) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #7 0x5607fc975e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (ossfuzz/fuzz_backtranslate+0x4ee06) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #8 0x5607fc97b8ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (ossfuzz/fuzz_backtranslate+0x548ba) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #9 0x5607fc9a6076 in main (ossfuzz/fuzz_backtranslate+0x7f076) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #10 0x7f4f52c2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #11 0x7f4f52c2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #12 0x5607fc9709d4 in _start (ossfuzz/fuzz_backtranslate+0x499d4) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+
+0x5210000050fc is located 4 bytes before 4112-byte region [0x521000005100,0x521000006110)
+allocated by thread T0 here:
+    #0 0x5607fca40e03 in malloc (ossfuzz/fuzz_backtranslate+0x119e03) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #1 0x5607fca8ac54 in _lou_allocMem build_asan/liblouis/../../code/liblouis/compileTranslationTable.c:5301:18
+    #2 0x5607fcabedac in _lou_backTranslate build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:233:23
+    #3 0x5607fcabdb44 in lou_backTranslate build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:153:9
+    #4 0x5607fcabd9b6 in lou_backTranslateString build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:145:9
+    #5 0x5607fca7fcd3 in LLVMFuzzerTestOneInput ossfuzz/./fuzz_backtranslate.c:110:3
+    #6 0x5607fc98ccd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (ossfuzz/fuzz_backtranslate+0x65cd4) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #7 0x5607fc975e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (ossfuzz/fuzz_backtranslate+0x4ee06) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #8 0x5607fc97b8ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (ossfuzz/fuzz_backtranslate+0x548ba) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #9 0x5607fc9a6076 in main (ossfuzz/fuzz_backtranslate+0x7f076) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+    #10 0x7f4f52c2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #11 0x7f4f52c2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #12 0x5607fc9709d4 in _start (ossfuzz/fuzz_backtranslate+0x499d4) (BuildId: 7566fceff8f3379fe705840dc0566283182b2862)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:1542:17 in back_passDoAction
+Shadow bytes around the buggy address:
+  0x521000004e00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x521000004e80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x521000004f00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x521000004f80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x521000005000: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x521000005080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa[fa]
+  0x521000005100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x521000005180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x521000005200: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x521000005280: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x521000005300: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==1093132==ABORTING
+(afgenllm)
 ```
