@@ -954,7 +954,7 @@ INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.
 Heap buffer overflow in `back_passDoAction()`
 
 ## Summary
-There is a heap buffer overflow problem when run `fuzz_backtranslate`
+There is a heap buffer overflow problem in `back_passDoAction()` at liblouis/lou_backTranslateString.c:1542 when run `fuzz_backtranslate`
 
 https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_backTranslateString.c#L1541-L1542
 
@@ -1061,9 +1061,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 Heap buffer overflow in `passDoAction()`
 
 ## Summary
-There is a heap buffer overflow problem when run `fuzz_translate_generic`
-
-https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_backTranslateString.c#L1541-L1542
+There is a heap buffer overflow problem in `passDoAction()` at liblouis/lou_translateString.c:1006 when run `fuzz_translate_generic`
 
 https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_translateString.c#L1003-L1007
 
@@ -1164,4 +1162,113 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   Left alloca redzone:     ca
   Right alloca redzone:    cb
 ==2263213==ABORTING
+```
+
+# poc-API-3d95765-doPassSearch-HBO
+Heap buffer overflow in `doPassSearch()`
+
+## Summary
+There is a heap buffer overflow problem in `doPassSearch()` at liblouis/lou_translateString.c:670 when run `fuzz_translate_generic`
+
+https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_translateString.c#L668-L670
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 3d95765)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+    ```bash
+    $ ./autogen.sh
+    $ mkdir build_asan
+    $ CC="clang -fsanitize=address,fuzzer-no-link -g " ../configure --prefix=$(pwd)/../bin_asan
+    $ make -j && make install
+    ```
+2. Compile the fuzz driver, the fuzz driver code is in `tests/fuzzing/fuzz_translate_generic.c`.
+    The compile command is:
+    ```bash
+    $ clang ./fuzz_translate_generic.c -o ./fuzz_translate_generic -fsanitize=fuzzer,address,undefined -g -I ./build_asan/liblouis -I ../liblouis ./bin_asan/lib/liblouis.a -lyaml
+    ```
+3. Download the [poc file](https://github.com/Marsman1996/pocs/raw/refs/heads/master/liblouis/poc-API-3d95765-doPassSearch-HBO) and run the compiled driver: `$ ./fuzz_translate_generic ./poc-API-3d95765-doPassSearch-HBO`
+
+## ASAN Report
+```
+$ ./ossfuzz/fuzz_translate_generic ./poc-API-3d95765-doPassSearch-HBO 
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 77422248
+INFO: Loaded 1 modules   (4658 inline 8-bit counters): 4658 [0x56155928f368, 0x56155929059a), 
+INFO: Loaded 1 PC tables (4658 PCs): 4658 [0x5615592905a0,0x5615592a28c0), 
+./ossfuzz/fuzz_translate_generic: Running 1 inputs 1 time(s) each.
+Running: ./poc-API-3d95765-doPassSearch-HBO
+=================================================================
+==2760979==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x51d000001288 at pc 0x5615591e4f4a bp 0x7ffc03a17270 sp 0x7ffc03a17268
+READ of size 2 at 0x51d000001288 thread T0
+    #0 0x5615591e4f49 in doPassSearch /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:670:11
+    #1 0x5615591def87 in passDoTest /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:876:14
+    #2 0x5615591db969 in findForPassRule /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:213:7
+    #3 0x5615591ebd8c in passSelectRule /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1034:7
+    #4 0x5615591d6f99 in translatePass /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1064:4
+    #5 0x5615591cba29 in _lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1294:16
+    #6 0x5615591c9b44 in lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1127:9
+    #7 0x5615591c99b6 in lou_translateString /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1119:9
+    #8 0x56155918bcd3 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/./fuzz_translate_generic.c:117:2
+    #9 0x561559098cd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x70cd4) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #10 0x561559081e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x59e06) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #11 0x5615590878ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x5f8ba) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #12 0x5615590b2076 in main (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x8a076) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #13 0x7f406d62a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #14 0x7f406d62a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #15 0x56155907c9d4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x549d4) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+
+0x51d000001288 is located 0 bytes after 2056-byte region [0x51d000000a80,0x51d000001288)
+allocated by thread T0 here:
+    #0 0x56155914ce03 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x124e03) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #1 0x5615591968be in _lou_allocMem /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/compileTranslationTable.c:5274:21
+    #2 0x5615591db3f3 in allocStringBuffer /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:62:9
+    #3 0x5615591cde96 in getStringBuffer /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:85:35
+    #4 0x5615591cb4d2 in _lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1264:9
+    #5 0x5615591c9b44 in lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1127:9
+    #6 0x5615591c99b6 in lou_translateString /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1119:9
+    #7 0x56155918bcd3 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/./fuzz_translate_generic.c:117:2
+    #8 0x561559098cd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x70cd4) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #9 0x561559081e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x59e06) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #10 0x5615590878ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x5f8ba) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #11 0x5615590b2076 in main (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x8a076) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+    #12 0x7f406d62a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #13 0x7f406d62a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #14 0x56155907c9d4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/latest/ossfuzz/fuzz_translate_generic+0x549d4) (BuildId: a8e03182a9d0d38f6405948c4cbb63f1f2ebdd8b)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /home/yuwei/afgen/afgenllm/database/liblouis/latest/build_asan/liblouis/../../code/liblouis/lou_translateString.c:670:11 in doPassSearch
+Shadow bytes around the buggy address:
+  0x51d000001000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51d000001080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51d000001100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51d000001180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51d000001200: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x51d000001280: 00[fa]fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51d000001300: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51d000001380: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51d000001400: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51d000001480: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51d000001500: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==2760979==ABORTING
 ```
