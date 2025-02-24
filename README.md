@@ -70,3 +70,10 @@
 | CVE-2023-27787 | tcpreplay | 7.5 HIGH       |
 | CVE-2023-27788 | tcpreplay | 7.5 HIGH       |
 | CVE-2023-27789 | tcpreplay | 7.5 HIGH       |
+
+## 2024
+| CVE ID         | Project | CVSS Score |
+| -------------- | ------- | ---------- |
+| CVE-2024-57492 | redox   |            |
+| CVE-2024-57493 | redox   |            |
+| CVE-2025-26623 | exiv2   | 5.3 MEDIUM |

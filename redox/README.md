@@ -1,4 +1,4 @@
-# syscall-munmap-f3fc45a-round_up_to_page_size-integer_overflow
+# syscall-munmap-f3fc45a-round_up_to_page_size-integer_overflow (CVE-2024-57492)
 Integer overflow in `round_up_to_page_size()`
 
 ### Describe the bug
@@ -133,7 +133,7 @@ SYSCALL: read(4, 0x7FFFFFFFFDC8, 32)
 HALT
 ```
 
-# syscall-setsockopt-32fca670-setsockopt-integer_overflow
+# syscall-setsockopt-32fca670-setsockopt-integer_overflow (CVE-2024-57493)
 Integer overflow in `setsockopt()`
 
 ### Describe the bug

@@ -953,12 +953,15 @@ INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.
 # poc-API-3d95765-back_passDoAction-HBO
 Heap buffer overflow in `back_passDoAction()`
 
+## Reference
+https://github.com/liblouis/liblouis/issues/1719
+
 ## Summary
 There is a heap buffer overflow problem in `back_passDoAction()` at liblouis/lou_backTranslateString.c:1542 when run `fuzz_backtranslate`
 
 https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_backTranslateString.c#L1541-L1542
 
-The loop `for (k = match.startReplace; k < match.endReplace; k++)` writes to `posMapping[k]` assuming `k` is within the input length. However, if the table defines invalid rules causing `match.endReplace` to exceed the input length, `k` exceeds the allocated `posMapping` buffer (sized to `max(inputLen, outputLen)`).
+In `back_passDoTest()`, `match->startReplace` is assigned `-1`. So in `back_passDoAction()` the `k` is `-1`, which causes a heap buffer overflow.
 
 ## Test Environment
 Ubuntu 24.04.1, 64bit  
@@ -1060,10 +1063,15 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 # poc-API-3d95765-passDoAction-HBO
 Heap buffer overflow in `passDoAction()`
 
+## Reference
+https://github.com/liblouis/liblouis/issues/1720
+
 ## Summary
 There is a heap buffer overflow problem in `passDoAction()` at liblouis/lou_translateString.c:1006 when run `fuzz_translate_generic`
 
 https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_translateString.c#L1003-L1007
+
+`destStartMatch + count` and `destStartReplace + count` exceed `output->maxlength`, causing the overflow.
 
 ## Test Environment
 Ubuntu 24.04.1, 64bit  
@@ -1167,10 +1175,15 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 # poc-API-3d95765-doPassSearch-HBO
 Heap buffer overflow in `doPassSearch()`
 
+## Reference
+https://github.com/liblouis/liblouis/issues/1721
+
 ## Summary
 There is a heap buffer overflow problem in `doPassSearch()` at liblouis/lou_translateString.c:670 when run `fuzz_translate_generic`
 
-https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_translateString.c#L668-L670
+https://github.com/liblouis/liblouis/blob/798304bfb1a05ff88465297d6df03bd7d7ed0d9f/liblouis/lou_translateString.c#L668-L681
+
+In the for loop, `*searchPos` exceeds the `input->length`, causing the overflow.
 
 ## Test Environment
 Ubuntu 24.04.1, 64bit  

@@ -235,11 +235,16 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ==32777==ABORTING
 ```
 
-# poc-API-41a8a4b-TiffComponent::accept-UAF
+# poc-API-41a8a4b-TiffComponent::accept-UAF (CVE-2025-26623)
 Use after free error when calling API `Exiv2::TiffParser::encode`
 
+## Reference
+https://github.com/Exiv2/exiv2/issues/3168
+
+## Details
+
 #### **Describe the bug**
-There is a use-after-free problem when calling API `Exiv2::TiffParser::encode`.
+There is a use-after-free problem in `src/tiffcomposite_int.cpp, Exiv2::Internal::TiffComponent::accept` when calling API `Exiv2::TiffParser::encode`.
 
 #### **To Reproduce**
 1. Compile Exiv2 with Address Sanitizer:
