@@ -1,37 +1,3 @@
-# syscall-munmap-f3fc45a-round_up_to_page_size-integer_overflow (CVE-2024-57492)
-Integer overflow in `round_up_to_page_size()`
-
-### Describe the bug
-There is an integer overflow in `round_up_to_page_size()` at src/platform/redox/mod.rs:48 when program calls memory related syscall (i.e., `mmap`, `munmap`, and `mprotect`) with large `len`.
-
-https://gitlab.redox-os.org/redox-os/relibc/-/blob/master/src/platform/redox/mod.rs?ref_type=heads#L47-49
-
-### To Reproduce
-1. Compile a program which calls system call `munmap` with large `len`
-```C
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <unistd.h>
-
-int main() {
-  void *addr = mmap(NULL, 4096, 0x3, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  munmap(addr, 0xffffffffffffffff);
-
-  return EXIT_SUCCESS;
-}
-```
-2. Run the compiled program
-
-### Logs
-I add `overflow-checks = true` for relibc.
-```log
-user:~# munmap
-RELIBC PANIC: panicked at src/platform/redox/mod.rs:48:6:
-attempt to add with overflow
-```
-
 # syscall-setitimer-7af6dd1-in_exact_chunks-divide_by_zero
 Divide by zero panic in `in_exact_chunks()`
 
@@ -133,51 +99,5 @@ SYSCALL: read(4, 0x7FFFFFFFFDC8, 32)
 HALT
 ```
 
-# syscall-setsockopt-32fca670-setsockopt-integer_overflow (CVE-2024-57493)
-Integer overflow in `setsockopt()`
-
-### Describe the bug
-There is an integer overflow error in `setsockopt()` at src/platform/redox/socket.rs:364:26 when program calls `setsockopt` relibc syscall with large `timeval.tv_usec`.
-
-https://gitlab.redox-os.org/redox-os/relibc/-/blob/master/src/platform/redox/socket.rs?ref_type=heads#L362-365
-
-### To Reproduce
-1. Compile a program which calls system call `setsockopt` with large `tv_usec` (i.e., 0x7fffffff)
-```C
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <unistd.h>
-
-int main() {
-  int sockfd;
-  struct timeval timeout;
-
-  timeout.tv_sec = 5;
-  timeout.tv_usec = 0x7fffffff;
-
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-
-  return 0;
-}
-```
-2. Run the compiled program
-
-### Environment
-- Official Podman
-- Intel(R) Xeon(R) Gold 6230R CPU @ 2.10GHz
-- Redox relibc version: main 32fca670
-
-### Logs
-I add `overflow-checks = true` for relibc.
-```log
-user:~# setsockopt
-RELIBC PANIC: panicked at src/platform/redox/socket.rs:364:26:
-attempt to multiply with overflow
-```
 
 # 
