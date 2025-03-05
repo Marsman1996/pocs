@@ -1285,3 +1285,117 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   Right alloca redzone:    cb
 ==2760979==ABORTING
 ```
+
+# poc-API-2442891-doPassSearch-HBO
+Heap buffer overflow in `doPassSearch()`
+
+## Reference
+
+## Summary
+There is a heap buffer overflow problem in `doPassSearch()` at liblouis/lou_translateString.c:654 when run `fuzz_translate_generic`
+
+https://github.com/liblouis/liblouis/blob/24428912bc57697044b0e8be8acbc8eacf25830a/liblouis/lou_translateString.c#L653-L655
+
+In the for loop, `*searchPos` exceeds the `input->length`, causing the overflow.
+The root cause is the same as issue #1721, and I checked all `*searchPos` in `doPassSearch()`, this is the last unchecked one.
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 2442891)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+    ```bash
+    $ ./autogen.sh
+    $ mkdir build_asan
+    $ CC="clang -fsanitize=address,fuzzer-no-link -g " ../configure --prefix=$(pwd)/../bin_asan
+    $ make -j && make install
+    ```
+2. Compile the fuzz driver, the fuzz driver code is in `tests/fuzzing/fuzz_translate_generic.c`.
+    The compile command is:
+    ```bash
+    $ clang ./fuzz_translate_generic.c -o ./fuzz_translate_generic -fsanitize=fuzzer,address,undefined -g -I ./build_asan/liblouis -I ../liblouis ./bin_asan/lib/liblouis.a -lyaml
+    ```
+3. Download the [poc file](https://github.com/Marsman1996/pocs/raw/refs/heads/master/liblouis/poc-API-2442891-doPassSearch-HBO) and run the compiled driver: `$ ./fuzz_translate_generic ./poc-API-2442891-doPassSearch-HBO`
+
+## ASan Report
+```
+$ ./fuzz_translate_generic ./poc-API-2442891-doPassSearch-HBO                                            
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2868530459
+INFO: Loaded 1 modules   (4662 inline 8-bit counters): 4662 [0x5600c2ae2388, 0x5600c2ae35be), 
+INFO: Loaded 1 PC tables (4662 PCs): 4662 [0x5600c2ae35c0,0x5600c2af5920), 
+./fuzz_translate_generic: Running 1 inputs 1 time(s) each.
+Running: ./poc-API-2442891-doPassSearch-HBO
+=================================================================
+==292378==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x51e000002268 at pc 0x5600c2a37a12 bp 0x7ffd86c46610 sp 0x7ffd86c46608
+READ of size 2 at 0x51e000002268 thread T0
+    #0 0x5600c2a37a11 in doPassSearch /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:654:10
+    #1 0x5600c2a32027 in passDoTest /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:877:14
+    #2 0x5600c2a2ea09 in findForPassRule /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:213:7
+    #3 0x5600c2a3f04c in passSelectRule /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1036:7
+    #4 0x5600c2a2a039 in translatePass /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1066:4
+    #5 0x5600c2a1eac9 in _lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1296:16
+    #6 0x5600c2a1cbe4 in lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1129:9
+    #7 0x5600c2a1ca56 in lou_translateString /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1121:9
+    #8 0x5600c29decd3 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/./fuzz_translate_generic.c:117:2
+    #9 0x5600c28ebcd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x70cd4) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #10 0x5600c28d4e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x59e06) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #11 0x5600c28da8ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x5f8ba) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #12 0x5600c2905076 in main (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x8a076) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #13 0x7f7a3642a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #14 0x7f7a3642a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #15 0x5600c28cf9d4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x549d4) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+
+0x51e000002268 is located 0 bytes after 2536-byte region [0x51e000001880,0x51e000002268)
+allocated by thread T0 here:
+    #0 0x5600c299fe03 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x124e03) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #1 0x5600c29e992e in _lou_allocMem /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/compileTranslationTable.c:5287:21
+    #2 0x5600c2a2e493 in allocStringBuffer /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:62:9
+    #3 0x5600c2a20f36 in getStringBuffer /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:85:35
+    #4 0x5600c2a1e572 in _lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1266:9
+    #5 0x5600c2a1cbe4 in lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1129:9
+    #6 0x5600c2a1ca56 in lou_translateString /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:1121:9
+    #7 0x5600c29decd3 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/./fuzz_translate_generic.c:117:2
+    #8 0x5600c28ebcd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x70cd4) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #9 0x5600c28d4e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x59e06) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #10 0x5600c28da8ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x5f8ba) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #11 0x5600c2905076 in main (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x8a076) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+    #12 0x7f7a3642a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #13 0x7f7a3642a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #14 0x5600c28cf9d4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_translate_generic+0x549d4) (BuildId: ac39fb29705cc4a7c2640b1203fd99f24cad6c9e)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_translateString.c:654:10 in doPassSearch
+Shadow bytes around the buggy address:
+  0x51e000001f80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51e000002000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51e000002080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51e000002100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x51e000002180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x51e000002200: 00 00 00 00 00 00 00 00 00 00 00 00 00[fa]fa fa
+  0x51e000002280: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51e000002300: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51e000002380: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51e000002400: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x51e000002480: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==292378==ABORTING
+```
