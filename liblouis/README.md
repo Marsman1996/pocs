@@ -1399,3 +1399,147 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   Right alloca redzone:    cb
 ==292378==ABORTING
 ```
+
+# poc-API-2442891-back_passDoAction-HBO
+Heap buffer overflow in `back_passDoAction()`
+
+## Reference
+
+## Summary
+There is a heap buffer overflow problem in `back_passDoAction()` at liblouis/lou_backTranslateString.c:1565 when run `fuzz_backtranslate`
+
+https://github.com/liblouis/liblouis/blob/24428912bc57697044b0e8be8acbc8eacf25830a/liblouis/lou_backTranslateString.c#L1563-L1566
+
+In the `while` loop, `destStartMatch + count * sizeof(*output->chars)` exceeds the `output->maxlength`, causing the overflow.
+The root cause is the similar to issue #1719.
+
+```
+(gdb) p count * sizeof(*output->chars)
+$11 = 10
+(gdb) p output->maxlength
+$10 = 8688
+(gdb) b lou_backTranslateString.c:1565 if destStartMatch == 8676
+Note: breakpoints 3 and 4 also set at pc 0x5555556f7ddc.
+Breakpoint 5 at 0x5555556f7ddc: file ../../code/liblouis/lou_backTranslateString.c, line 1565.
+(gdb) c
+Continuing.
+
+Thread 1 "fuzz_backtransl" hit Breakpoint 5, back_passDoAction (table=0x530000000400, pos=0x7ffff5a09020, mode=64, input=0x7ffff5b09260, output=0x7ffff5b092a0, 
+    posMapping=0x52d000000400, cursorPosition=0x7ffff5b092e0, cursorStatus=0x7ffff5b092f0, ctx=0x7ffff5a09030, currentOpcode=CTO_Pass2, currentRule=0x530000008218, 
+    passInstructions=0x53000000824e, passIC=24, match=...) at ../../code/liblouis/lou_backTranslateString.c:1565
+1565                                    memmove(&output->chars[destStartMatch], &output->chars[destStartReplace],
+1: destStartMatch = 8676
+(gdb) 
+Continuing.
+
+Thread 1 "fuzz_backtransl" hit Breakpoint 4, back_passDoAction (table=0x530000000400, pos=0x7ffff5a09020, mode=64, input=0x7ffff5b09260, output=0x7ffff5b092a0, 
+    posMapping=0x52d000000400, cursorPosition=0x7ffff5b092e0, cursorStatus=0x7ffff5b092f0, ctx=0x7ffff5a09030, currentOpcode=CTO_Pass2, currentRule=0x530000008218, 
+    passInstructions=0x53000000824e, passIC=24, match=...) at ../../code/liblouis/lou_backTranslateString.c:1565
+1565                                    memmove(&output->chars[destStartMatch], &output->chars[destStartReplace],
+1: destStartMatch = 8677
+(gdb) 
+Continuing.
+=================================================================
+==3545186==ERROR: AddressSanitizer: heap-buffer-overflow
+```
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 2442891)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+    ```bash
+    $ ./autogen.sh
+    $ mkdir build_asan
+    $ CC="clang -fsanitize=address,fuzzer-no-link -g " ../configure --prefix=$(pwd)/../bin_asan
+    $ make -j && make install
+    ```
+2. Compile the fuzz driver, the fuzz driver code is in `tests/fuzzing/fuzz_backtranslate.c`.
+    The compile command is:
+    ```bash
+    $ clang ./fuzz_backtranslate.c -o ./fuzz_backtranslate -fsanitize=fuzzer,address,undefined -g -I ./build_asan/liblouis -I ../liblouis ./bin_asan/lib/liblouis.a -lyaml
+    ```
+3. Download the [poc file](https://github.com/Marsman1996/pocs/raw/refs/heads/master/liblouis/poc-API-2442891-back_passDoAction-HBO) and run the compiled driver: `$ ./fuzz_backtranslate ./poc-API-2442891-back_passDoAction-HBO`
+
+## ASan Report
+```
+$ ./fuzz_backtranslate ./poc-API-2442891-back_passDoAction-HBO
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2677507738
+INFO: Loaded 1 modules   (2924 inline 8-bit counters): 2924 [0x563bac609748, 0x563bac60a2b4), 
+INFO: Loaded 1 PC tables (2924 PCs): 2924 [0x563bac60a2b8,0x563bac615978), 
+./fuzz_backtranslate: Running 1 inputs 1 time(s) each.
+Running: ./poc-API-2442891-back_passDoAction-HBO
+=================================================================
+==2386643==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x5290000135e8 at pc 0x563bac50f1d7 bp 0x7ffe610dedb0 sp 0x7ffe610de570
+READ of size 10 at 0x5290000135e8 thread T0
+    #0 0x563bac50f1d6 in __asan_memmove (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x1181d6) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #1 0x563bac59ae8c in back_passDoAction /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:1565:5
+    #2 0x563bac595fbb in translatePass /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:1630:9
+    #3 0x563bac58f3bc in _lou_backTranslate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:267:9
+    #4 0x563bac58dbe4 in lou_backTranslate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:153:9
+    #5 0x563bac58da56 in lou_backTranslateString /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:145:9
+    #6 0x563bac54fcd3 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/./fuzz_backtranslate.c:110:3
+    #7 0x563bac45ccd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x65cd4) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #8 0x563bac445e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x4ee06) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #9 0x563bac44b8ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x548ba) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #10 0x563bac476076 in main (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x7f076) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #11 0x7f9d3142a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #12 0x7f9d3142a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #13 0x563bac4409d4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x499d4) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+
+0x5290000135e8 is located 0 bytes after 17384-byte region [0x52900000f200,0x5290000135e8)
+allocated by thread T0 here:
+    #0 0x563bac510e03 in malloc (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x119e03) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #1 0x563bac55a92e in _lou_allocMem /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/compileTranslationTable.c:5287:21
+    #2 0x563bac596983 in allocStringBuffer /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:56:9
+    #3 0x563bac591526 in getStringBuffer /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:79:35
+    #4 0x563bac58e7a8 in _lou_backTranslate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:214:8
+    #5 0x563bac58dbe4 in lou_backTranslate /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:153:9
+    #6 0x563bac58da56 in lou_backTranslateString /home/yuwei/afgen/afgenllm/database/liblouis/fixed/build_asan/liblouis/../../code/liblouis/lou_backTranslateString.c:145:9
+    #7 0x563bac54fcd3 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/./fuzz_backtranslate.c:110:3
+    #8 0x563bac45ccd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x65cd4) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #9 0x563bac445e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x4ee06) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #10 0x563bac44b8ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x548ba) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #11 0x563bac476076 in main (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x7f076) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+    #12 0x7f9d3142a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #13 0x7f9d3142a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #14 0x563bac4409d4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x499d4) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow (/home/yuwei/afgen/afgenllm/database/liblouis/fixed/ossfuzz/fuzz_backtranslate+0x1181d6) (BuildId: e185cb2e51f4decd648cacf00090d446166bbd81) in __asan_memmove
+Shadow bytes around the buggy address:
+  0x529000013300: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x529000013380: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x529000013400: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x529000013480: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x529000013500: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x529000013580: 00 00 00 00 00 00 00 00 00 00 00 00 00[fa]fa fa
+  0x529000013600: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x529000013680: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x529000013700: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x529000013780: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x529000013800: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==2386643==ABORTING
+```
+
+#
