@@ -1411,7 +1411,6 @@ There is a heap buffer overflow problem in `back_passDoAction()` at liblouis/lou
 https://github.com/liblouis/liblouis/blob/24428912bc57697044b0e8be8acbc8eacf25830a/liblouis/lou_backTranslateString.c#L1563-L1566
 
 In the `while` loop, `destStartMatch + count * sizeof(*output->chars)` exceeds the `output->maxlength`, causing the overflow.
-The root cause is the similar to issue #1719.
 
 ```
 (gdb) p count * sizeof(*output->chars)
