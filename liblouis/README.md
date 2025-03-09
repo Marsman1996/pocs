@@ -1541,4 +1541,76 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ==2386643==ABORTING
 ```
 
+# poc-API-2442891-isEmphasizable-infinite_loop
+Infinite loop in `isEmphasizable`
+
+## Reference
+
+
+## Summary
+There is a infinite loop problem in `isEmphasizable()` at liblouis/lou_translateString.c:2585 when run `./fuzz_translate_generic`
+
+https://github.com/liblouis/liblouis/blob/24428912bc57697044b0e8be8acbc8eacf25830a/liblouis/lou_translateString.c#L2585-L2587
+
+If we add output here, it repeats with:
+```
+chardef->linked = 92
+chardef = 0x530000008260
+```
+
+## Test Environment
+Ubuntu 24.04.1, 64bit  
+liblouis (master, 2442891)
+
+## How to trigger
+1. Compile liblouis with AddressSanitizer
+    ```bash
+    $ ./autogen.sh
+    $ mkdir build_asan
+    $ CC="clang -fsanitize=address,fuzzer-no-link -g " ../configure --prefix=$(pwd)/../bin_asan
+    $ make -j && make install
+    ```
+2. Compile the fuzz driver, the fuzz driver code is in `tests/fuzzing/fuzz_translate_generic.c`.
+    The compile command is:
+    ```bash
+    $ clang ./fuzz_translate_generic.c -o ./fuzz_translate_generic -fsanitize=fuzzer,address,undefined -I./liblouis ./liblouis/.libs/liblouis.a -lyaml -g
+    ```
+3. Download the [poc file](https://github.com/Marsman1996/pocs/raw/refs/heads/master/liblouis/poc-API-2442891-isEmphasizable-infinite_loop) and run the compiled driver: `$ ./fuzz_translate_generic ./poc-API-2442891-isEmphasizable-infinite_loop`
+
+## Report
+```
+$ ./fuzz_translate_generic poc-API-2442891-isEmphasizable-infinite_loop 
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 1955698036
+INFO: Loaded 1 modules   (4662 inline 8-bit counters): 4662 [0x561a7d2b0388, 0x561a7d2b15be), 
+INFO: Loaded 1 PC tables (4662 PCs): 4662 [0x561a7d2b15c0,0x561a7d2c3920), 
+./fuzz_translate_generic: Running 1 inputs 1 time(s) each.
+Running: poc-API-2442891-isEmphasizable-infinite_loop
+ALARM: working on the last Unit for 1201 seconds
+       and the timeout value is 1200 (use -timeout=N to change)
+==3957665== ERROR: libFuzzer: timeout after 1201 seconds
+    #0 0x561a7d178b65 in __sanitizer_print_stack_trace (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x12fb65) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+    #1 0x561a7d0d267c in fuzzer::PrintStackTrace() (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x8967c) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+    #2 0x561a7d0b867b in fuzzer::Fuzzer::AlarmCallback() (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x6f67b) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+    #3 0x7fb58d84532f  (/lib/x86_64-linux-gnu/libc.so.6+0x4532f) (BuildId: 42c84c92e6f98126b3e2230ebfdead22c235b667)
+    #4 0x561a7d2281ae in isEmphasizable /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:2585:3
+    #5 0x561a7d22903c in isEmphasized /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:2605:7
+    #6 0x561a7d21bd61 in resolveEmphasisBeginEnd /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:2666:19
+    #7 0x561a7d20e908 in markEmphases /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:3311:3
+    #8 0x561a7d1f1a14 in translateString /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:3648:2
+    #9 0x561a7d1eca52 in _lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:1289:16
+    #10 0x561a7d1eabe4 in lou_translate /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:1129:9
+    #11 0x561a7d1eaa56 in lou_translateString /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/liblouis/lou_translateString.c:1121:9
+    #12 0x561a7d1accd3 in LLVMFuzzerTestOneInput /home/yuwei/afgen/afgenllm/database/liblouis/liblouis/./fuzz_translate_generic.c:117:2
+    #13 0x561a7d0b9cd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x70cd4) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+    #14 0x561a7d0a2e06 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x59e06) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+    #15 0x561a7d0a88ba in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x5f8ba) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+    #16 0x561a7d0d3076 in main (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x8a076) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+    #17 0x7fb58d82a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #18 0x7fb58d82a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #19 0x561a7d09d9d4 in _start (/home/yuwei/afgen/afgenllm/database/liblouis/liblouis/fuzz_translate_generic+0x549d4) (BuildId: 3cbaf38d27e871f26848ae661eb6aaf203cfeba0)
+
+SUMMARY: libFuzzer: timeout
+```
+
 #
